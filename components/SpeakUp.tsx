@@ -1,0 +1,1290 @@
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type Screen = "home" | "scenarios" | "practice" | "teleprompter";
+
+interface Scenario {
+  id: string;
+  icon: string;
+  title: string;
+  subtitle: string;
+  difficulty: "Beginner" | "Intermediate" | "Advanced" | "Variable";
+  difficultyColor: string;
+  trains: string;
+  duration: string;
+  accent: string;
+  tips: {
+    focus: string[];
+    mistakes: string[];
+    body: string[];
+    improv?: string;
+  };
+}
+
+// ─── Data ────────────────────────────────────────────────────────────────────
+
+const SCENARIOS: Scenario[] = [
+  {
+    id: "interview",
+    icon: "💼",
+    title: "Job Interview",
+    subtitle: "Land the role with clarity and confidence",
+    difficulty: "Intermediate",
+    difficultyColor: "text-blue-400 bg-blue-400/10",
+    trains: "Concise storytelling · STAR method · Composure",
+    duration: "2–5 min",
+    accent: "#3b82f6",
+    tips: {
+      focus: [
+        "Use the STAR method: Situation, Task, Action, Result",
+        "Quantify your achievements wherever possible",
+        "Pause before answering — it signals thoughtfulness, not uncertainty",
+        "Mirror the interviewer's energy and vocabulary subtly",
+      ],
+      mistakes: [
+        "Rambling without a clear point — practice a 90-second cap per answer",
+        "Saying 'um' or 'like' as filler — replace with silence",
+        "Badmouthing previous employers",
+        "Forgetting to ask questions at the end",
+      ],
+      body: [
+        "Sit forward slightly — it signals engagement",
+        "Maintain soft eye contact, not a stare",
+        "Keep hands visible and still on the table",
+        "Smile naturally when appropriate — warmth builds rapport",
+      ],
+    },
+  },
+  {
+    id: "wedding",
+    icon: "🥂",
+    title: "Wedding Toast",
+    subtitle: "A speech they'll remember for decades",
+    difficulty: "Beginner",
+    difficultyColor: "text-pink-400 bg-pink-400/10",
+    trains: "Warmth · Storytelling · Emotional delivery",
+    duration: "2–4 min",
+    accent: "#ec4899",
+    tips: {
+      focus: [
+        "Open with a specific, vivid memory — not 'When I first met...'",
+        "Balance humor with genuine emotion",
+        "Address the couple, not just the room",
+        "End with a clear, sincere toast that everyone can raise a glass to",
+      ],
+      mistakes: [
+        "Reading word-for-word from your phone — memorize the arc, not the script",
+        "Inside jokes only 2 people understand",
+        "Going over 4 minutes — audiences lose attention",
+        "Making it about yourself",
+      ],
+      body: [
+        "Hold your glass at chest height when toasting",
+        "Make eye contact with the couple throughout",
+        "Speak slowly — emotions make us rush",
+        "Let yourself feel it — authentic emotion is contagious",
+      ],
+    },
+  },
+  {
+    id: "pitch",
+    icon: "📈",
+    title: "Investor Pitch",
+    subtitle: "Convince the room your vision is fundable",
+    difficulty: "Advanced",
+    difficultyColor: "text-amber-400 bg-amber-400/10",
+    trains: "Persuasion · Data storytelling · Handling objections",
+    duration: "5–10 min",
+    accent: "#f59e0b",
+    tips: {
+      focus: [
+        "Lead with the problem, not the solution",
+        "Know your numbers cold — TAM, MRR, burn rate, runway",
+        "Tell a customer story that makes the pain visceral",
+        "Anticipate the top 5 objections and have crisp answers ready",
+      ],
+      mistakes: [
+        "Too many slides, too little story",
+        "Vague market sizing — 'the market is $100B' without logic",
+        "Underselling your team's credibility",
+        "Defensiveness when challenged — welcome pushback",
+      ],
+      body: [
+        "Command the room by owning your space — don't hide behind the podium",
+        "Vary your pace: slow down on key numbers",
+        "Use deliberate hand gestures to emphasize points",
+        "Dress one level above your audience",
+      ],
+    },
+  },
+  {
+    id: "ted",
+    icon: "🎤",
+    title: "TED-Style Talk",
+    subtitle: "One idea worth spreading, delivered perfectly",
+    difficulty: "Advanced",
+    difficultyColor: "text-amber-400 bg-amber-400/10",
+    trains: "Big ideas · Narrative arc · Stage presence",
+    duration: "10–18 min",
+    accent: "#ef4444",
+    tips: {
+      focus: [
+        "Start with a counterintuitive statement or bold claim",
+        "Build to one central idea — resist adding more",
+        "Use the 'Rule of Three' for structure",
+        "End with a call to action or a memorable line that echoes your opening",
+      ],
+      mistakes: [
+        "Starting with 'I'm so honored to be here today'",
+        "Reading slides instead of speaking to the audience",
+        "Covering too many ideas — less is always more",
+        "No emotional hook — facts without feeling don't stick",
+      ],
+      body: [
+        "Walk the stage with intention — every move should mean something",
+        "Use the 'pregnant pause' before your key line",
+        "Let silence be your punctuation",
+        "Facial expressions should match your content",
+      ],
+    },
+  },
+  {
+    id: "difficult",
+    icon: "🔥",
+    title: "Difficult Conversation",
+    subtitle: "Navigate high-stakes talks with grace",
+    difficulty: "Advanced",
+    difficultyColor: "text-amber-400 bg-amber-400/10",
+    trains: "Empathy · Directness · Emotional regulation",
+    duration: "Variable",
+    accent: "#f97316",
+    tips: {
+      focus: [
+        "Lead with care, not the issue — 'I want to talk because I respect you'",
+        "Use 'I' statements, not 'you always/never' accusations",
+        "State the impact clearly, not just the behavior",
+        "Give the other person space to respond — don't fill every silence",
+      ],
+      mistakes: [
+        "Burying the lead — don't spend 10 minutes building to it",
+        "Over-apologizing before you've even said anything",
+        "Having the conversation over text or email",
+        "Getting defensive if they react emotionally",
+      ],
+      body: [
+        "Sit at the same level, never stand over someone",
+        "Maintain open body language — no crossed arms",
+        "Breathe deeply before responding to strong reactions",
+        "Keep your voice calm and even — lower register signals authority",
+      ],
+    },
+  },
+  {
+    id: "debate",
+    icon: "⚡",
+    title: "Debate & Argument",
+    subtitle: "Win with logic, evidence, and composure",
+    difficulty: "Intermediate",
+    difficultyColor: "text-blue-400 bg-blue-400/10",
+    trains: "Logical reasoning · Rebuttals · Composure under fire",
+    duration: "2–5 min",
+    accent: "#8b5cf6",
+    tips: {
+      focus: [
+        "Steelman the opposing argument before dismantling it",
+        "Lead with your strongest point, not your weakest",
+        "Use concrete examples and analogies to make abstract points land",
+        "Name the rhetorical technique when you see it — it disarms it",
+      ],
+      mistakes: [
+        "Attacking the person instead of the argument (ad hominem)",
+        "Getting visibly emotional — it undermines your credibility",
+        "Overloading with too many points — three strong beats ten weak",
+        "Not listening to what they actually said — rebutting a strawman",
+      ],
+      body: [
+        "Stay physically still when challenged — movement signals anxiety",
+        "A slight smile while listening shows confidence",
+        "Take a beat before responding — it looks like you're thinking, not reacting",
+        "Maintain eye contact during your strongest points",
+      ],
+    },
+  },
+  {
+    id: "improv",
+    icon: "🎲",
+    title: "Improv Challenge",
+    subtitle: "Speak on any topic, instantly, brilliantly",
+    difficulty: "Variable",
+    difficultyColor: "text-green-400 bg-green-400/10",
+    trains: "Quick thinking · Confidence · Adaptability",
+    duration: "1–3 min",
+    accent: "#10b981",
+    tips: {
+      focus: [
+        "The first thing that comes to mind is usually your best bet — commit to it",
+        "Use the PREP structure: Point, Reason, Example, Point",
+        "Buy yourself 3 seconds by repeating the topic as a question",
+        "Every improv talk needs a beginning, middle, and end — even 60-second ones",
+      ],
+      mistakes: [
+        "Apologizing or laughing nervously before you start",
+        "Stopping to think out loud — keep moving, edit mentally",
+        "Trying to be impressive instead of being clear",
+        "Ending weakly — always close with a strong final sentence",
+      ],
+      body: [
+        "Plant your feet — movement signals nervousness",
+        "Take one deep breath before you start",
+        "Speak to the back of the room — project",
+        "Smile when you finish — sell your confidence even if unsure",
+      ],
+      improv: "Click 'New Topic' to get a random speaking prompt. You have 30 seconds to prepare, then speak for the full timer duration.",
+    },
+  },
+];
+
+const IMPROV_TOPICS = [
+  "Why mornings are the most underrated part of the day",
+  "The one skill every person should learn before turning 30",
+  "What social media has taken from us that we don't talk about",
+  "The most important lesson a failure taught you",
+  "Why being boring is actually a superpower",
+  "The case for slowing down in a world obsessed with speed",
+  "What your commute secretly tells you about your priorities",
+  "The surprising way children are smarter than adults",
+  "Why the best leaders are also the best listeners",
+  "The hidden cost of always being available",
+  "What a perfect day actually looks like — and why you avoid it",
+  "The one thing you wish you'd known at 18",
+  "Why small talk is more important than we think",
+  "The problem with always optimizing for efficiency",
+  "What we lose when we stop being beginners",
+  "The most underrated form of courage",
+  "Why your assumptions about other people are usually wrong",
+  "What makes a city feel alive",
+  "The thing you do every day that you've never questioned",
+  "Why constraints make us more creative, not less",
+];
+
+const TIMER_OPTIONS = [
+  { label: "30s", seconds: 30 },
+  { label: "1 min", seconds: 60 },
+  { label: "2 min", seconds: 120 },
+  { label: "5 min", seconds: 300 },
+];
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m > 0 ? `${m}:${s.toString().padStart(2, "0")}` : `0:${s.toString().padStart(2, "0")}`;
+}
+
+function getStreakData(): { count: number; lastDate: string } {
+  if (typeof window === "undefined") return { count: 0, lastDate: "" };
+  try {
+    const raw = localStorage.getItem("speakup_streak");
+    if (!raw) return { count: 0, lastDate: "" };
+    return JSON.parse(raw);
+  } catch {
+    return { count: 0, lastDate: "" };
+  }
+}
+
+function updateStreak(): number {
+  if (typeof window === "undefined") return 0;
+  const today = new Date().toDateString();
+  const data = getStreakData();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+
+  let newCount = data.count;
+  if (data.lastDate === today) {
+    return newCount;
+  } else if (data.lastDate === yesterday) {
+    newCount = data.count + 1;
+  } else {
+    newCount = 1;
+  }
+
+  localStorage.setItem("speakup_streak", JSON.stringify({ count: newCount, lastDate: today }));
+  return newCount;
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function StreakBadge({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold"
+      style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.25)", color: "#fbbf24" }}>
+      <span>{count >= 7 ? "🔥" : count >= 3 ? "🔥" : "✨"}</span>
+      <span>Day {count} streak</span>
+    </div>
+  );
+}
+
+function DifficultyBadge({ label, colorClass }: { label: string; colorClass: string }) {
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${colorClass}`}>
+      {label}
+    </span>
+  );
+}
+
+function CircularTimer({
+  seconds,
+  total,
+  active,
+}: {
+  seconds: number;
+  total: number;
+  active: boolean;
+}) {
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const progress = total > 0 ? (seconds / total) : 1;
+  const offset = circumference * (1 - progress);
+  const isLow = seconds <= 10 && seconds > 0 && active;
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: 160, height: 160 }}>
+      {/* Glow ring */}
+      {active && (
+        <div className="absolute inset-0 rounded-full animate-glow" style={{
+          boxShadow: isLow
+            ? "0 0 40px rgba(239,68,68,0.4)"
+            : "0 0 30px rgba(251,191,36,0.25)"
+        }} />
+      )}
+      <svg width={160} height={160} className="absolute">
+        {/* Background ring */}
+        <circle
+          cx={80} cy={80} r={radius}
+          fill="none"
+          stroke="rgba(255,255,255,0.07)"
+          strokeWidth={8}
+        />
+        {/* Progress ring */}
+        <circle
+          cx={80} cy={80} r={radius}
+          fill="none"
+          stroke={isLow ? "#ef4444" : "#f59e0b"}
+          strokeWidth={8}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className="progress-ring"
+          style={{ transition: "stroke-dashoffset 0.5s ease, stroke 0.3s ease" }}
+        />
+      </svg>
+      <div className="relative z-10 text-center">
+        <div
+          className={`text-4xl font-bold tabular-nums ${isLow ? "text-red-400 animate-timer-pulse" : "text-white"}`}
+          style={{ fontVariantNumeric: "tabular-nums" }}
+        >
+          {formatTime(seconds)}
+        </div>
+        {active && (
+          <div className="text-xs text-white/40 mt-1 uppercase tracking-widest">
+            {seconds === 0 ? "Done" : "Speaking"}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CoachingPanel({ scenario }: { scenario: Scenario }) {
+  const [tab, setTab] = useState<"focus" | "mistakes" | "body">("focus");
+
+  const tabs = [
+    { key: "focus" as const, label: "Focus On", icon: "🎯" },
+    { key: "mistakes" as const, label: "Common Mistakes", icon: "⚠️" },
+    { key: "body" as const, label: "Body Language", icon: "🧍" },
+  ];
+
+  const content = {
+    focus: scenario.tips.focus,
+    mistakes: scenario.tips.mistakes,
+    body: scenario.tips.body,
+  };
+
+  return (
+    <div className="glass rounded-2xl overflow-hidden">
+      <div className="flex border-b border-white/[0.06]">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-all ${
+              tab === t.key
+                ? "text-amber-400 border-b-2 border-amber-400 -mb-px"
+                : "text-white/40 hover:text-white/70"
+            }`}
+          >
+            <span>{t.icon}</span>
+            <span className="hidden sm:inline">{t.label}</span>
+          </button>
+        ))}
+      </div>
+      <div className="p-5 space-y-3">
+        {content[tab].map((tip, i) => (
+          <div
+            key={i}
+            className="flex gap-3 animate-fade-in"
+            style={{ animationDelay: `${i * 60}ms`, animationFillMode: "both", opacity: 0 }}
+          >
+            <div className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5"
+              style={{ background: "rgba(251,191,36,0.15)", color: "#f59e0b", fontSize: 11, fontWeight: 700 }}>
+              {i + 1}
+            </div>
+            <p className="text-sm text-white/75 leading-relaxed">{tip}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────────
+
+export default function SpeakUp() {
+  const [screen, setScreen] = useState<Screen>("home");
+  const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [improvTopic, setImprovTopic] = useState("");
+
+  // Timer state
+  const [timerDuration, setTimerDuration] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(60);
+  const [timerActive, setTimerActive] = useState(false);
+  const [timerDone, setTimerDone] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const chimeRef = useRef<AudioContext | null>(null);
+
+  // Teleprompter state
+  const [promptText, setPromptText] = useState("");
+  const [promptSpeed, setPromptSpeed] = useState(50);
+  const [promptScrolling, setPromptScrolling] = useState(false);
+  const [promptFullscreen, setPromptFullscreen] = useState(false);
+  const promptRef = useRef<HTMLDivElement>(null);
+  const promptContainerRef = useRef<HTMLDivElement>(null);
+  const scrollAnimRef = useRef<number | null>(null);
+  const scrollPosRef = useRef(0);
+
+  // Load streak on mount
+  useEffect(() => {
+    const data = getStreakData();
+    setStreak(data.count);
+  }, []);
+
+  // Random improv topic
+  const newImprovTopic = useCallback(() => {
+    const idx = Math.floor(Math.random() * IMPROV_TOPICS.length);
+    setImprovTopic(IMPROV_TOPICS[idx]);
+  }, []);
+
+  // Timer logic
+  useEffect(() => {
+    if (timerActive && timeLeft > 0) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft((t) => {
+          if (t <= 1) {
+            clearInterval(timerRef.current!);
+            setTimerActive(false);
+            setTimerDone(true);
+            playChime();
+            return 0;
+          }
+          return t - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [timerActive]);
+
+  function playChime() {
+    try {
+      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        const start = ctx.currentTime + i * 0.18;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.18, start + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.8);
+        osc.start(start);
+        osc.stop(start + 0.9);
+      });
+    } catch {
+      // Silently ignore if audio not available
+    }
+  }
+
+  function startTimer() {
+    setTimeLeft(timerDuration);
+    setTimerDone(false);
+    setTimerActive(true);
+    // Update streak on practice start
+    const newStreak = updateStreak();
+    setStreak(newStreak);
+  }
+
+  function pauseTimer() {
+    setTimerActive(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+  }
+
+  function resetTimer() {
+    setTimerActive(false);
+    setTimerDone(false);
+    if (timerRef.current) clearInterval(timerRef.current);
+    setTimeLeft(timerDuration);
+  }
+
+  function selectTimerDuration(s: number) {
+    setTimerDuration(s);
+    setTimeLeft(s);
+    resetTimer();
+  }
+
+  // Teleprompter scroll logic
+  const startScroll = useCallback(() => {
+    setPromptScrolling(true);
+  }, []);
+
+  const stopScroll = useCallback(() => {
+    setPromptScrolling(false);
+    if (scrollAnimRef.current) {
+      cancelAnimationFrame(scrollAnimRef.current);
+      scrollAnimRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!promptScrolling || !promptContainerRef.current) return;
+
+    const container = promptContainerRef.current;
+    const maxScroll = container.scrollHeight - container.clientHeight;
+    const pxPerMs = (promptSpeed / 50) * 0.06; // ~60px/s at speed=50
+
+    let last = performance.now();
+
+    function tick(now: number) {
+      const dt = now - last;
+      last = now;
+      scrollPosRef.current = Math.min(scrollPosRef.current + pxPerMs * dt, maxScroll);
+      container.scrollTop = scrollPosRef.current;
+      if (scrollPosRef.current < maxScroll) {
+        scrollAnimRef.current = requestAnimationFrame(tick);
+      } else {
+        setPromptScrolling(false);
+      }
+    }
+
+    scrollAnimRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (scrollAnimRef.current) cancelAnimationFrame(scrollAnimRef.current);
+    };
+  }, [promptScrolling, promptSpeed]);
+
+  function resetScroll() {
+    stopScroll();
+    scrollPosRef.current = 0;
+    if (promptContainerRef.current) promptContainerRef.current.scrollTop = 0;
+  }
+
+  // Navigate to practice screen
+  function openScenario(scenario: Scenario) {
+    setSelectedScenario(scenario);
+    resetTimer();
+    if (scenario.id === "improv") newImprovTopic();
+    setScreen("practice");
+  }
+
+  // Render screens
+  if (screen === "teleprompter") {
+    return (
+      <TeleprompterScreen
+        text={promptText}
+        setText={setPromptText}
+        speed={promptSpeed}
+        setSpeed={setPromptSpeed}
+        scrolling={promptScrolling}
+        fullscreen={promptFullscreen}
+        setFullscreen={setPromptFullscreen}
+        onStart={startScroll}
+        onStop={stopScroll}
+        onReset={resetScroll}
+        containerRef={promptContainerRef}
+        onBack={() => setScreen("home")}
+      />
+    );
+  }
+
+  if (screen === "practice" && selectedScenario) {
+    return (
+      <PracticeScreen
+        scenario={selectedScenario}
+        timerDuration={timerDuration}
+        timeLeft={timeLeft}
+        timerActive={timerActive}
+        timerDone={timerDone}
+        improvTopic={improvTopic}
+        onSelectDuration={selectTimerDuration}
+        onStart={startTimer}
+        onPause={pauseTimer}
+        onReset={resetTimer}
+        onNewTopic={newImprovTopic}
+        onBack={() => {
+          resetTimer();
+          setScreen("scenarios");
+        }}
+        onTeleprompter={() => setScreen("teleprompter")}
+      />
+    );
+  }
+
+  if (screen === "scenarios") {
+    return (
+      <ScenariosScreen
+        onSelect={openScenario}
+        onBack={() => setScreen("home")}
+      />
+    );
+  }
+
+  return (
+    <HomeScreen
+      streak={streak}
+      onStart={() => setScreen("scenarios")}
+      onTeleprompter={() => setScreen("teleprompter")}
+    />
+  );
+}
+
+// ─── Home Screen ─────────────────────────────────────────────────────────────
+
+function HomeScreen({
+  streak,
+  onStart,
+  onTeleprompter,
+}: {
+  streak: number;
+  onStart: () => void;
+  onTeleprompter: () => void;
+}) {
+  return (
+    <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(135deg, #0a0a0f 0%, #0f0f1a 50%, #0a0a0f 100%)" }}>
+      {/* Nav */}
+      <nav className="nav-blur sticky top-0 z-50 flex items-center justify-between px-6 py-4">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">🎤</span>
+          <span className="text-xl font-bold text-white">Speak<span className="shimmer-text">Up</span></span>
+        </div>
+        <div className="flex items-center gap-3">
+          <StreakBadge count={streak} />
+          <button
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold opacity-50 cursor-not-allowed"
+            style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", color: "#fbbf24" }}
+            disabled
+            title="Coming soon"
+          >
+            <span>✦</span>
+            <span>Premium</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-20 text-center">
+        {/* Ambient glow */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div style={{
+            position: "absolute",
+            top: "20%",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: 600,
+            height: 600,
+            borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(251,191,36,0.06) 0%, transparent 70%)",
+          }} />
+        </div>
+
+        <div className="relative z-10 max-w-3xl mx-auto animate-fade-in">
+          {streak > 0 && (
+            <div className="mb-8">
+              <StreakBadge count={streak} />
+            </div>
+          )}
+
+          <h1 className="text-5xl sm:text-7xl font-bold tracking-tight mb-6 leading-none">
+            <span className="text-white">Speak with</span>
+            <br />
+            <span className="shimmer-text">confidence.</span>
+          </h1>
+
+          <p className="text-lg sm:text-xl text-white/50 max-w-xl mx-auto mb-12 leading-relaxed">
+            Practice real speaking scenarios with expert coaching, a built-in timer, and a teleprompter — right in your browser.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={onStart}
+              className="btn-primary px-8 py-4 rounded-2xl text-lg font-bold relative overflow-hidden"
+            >
+              <span className="relative z-10">Start Practicing →</span>
+            </button>
+            <button
+              onClick={onTeleprompter}
+              className="px-8 py-4 rounded-2xl text-lg font-semibold glass transition-all hover:border-white/20 hover:bg-white/[0.06]"
+              style={{ color: "rgba(255,255,255,0.7)" }}
+            >
+              Teleprompter Mode
+            </button>
+          </div>
+        </div>
+
+        {/* Feature pills */}
+        <div className="relative z-10 mt-20 flex flex-wrap justify-center gap-3 animate-fade-in"
+          style={{ animationDelay: "0.3s", animationFillMode: "both", opacity: 0 }}>
+          {[
+            { icon: "🎯", text: "7 Scenarios" },
+            { icon: "⏱️", text: "Practice Timer" },
+            { icon: "📋", text: "Teleprompter" },
+            { icon: "🧠", text: "Coaching Tips" },
+            { icon: "🔥", text: "Daily Streaks" },
+          ].map((f) => (
+            <div key={f.text} className="glass flex items-center gap-2 px-4 py-2 rounded-full text-sm text-white/60">
+              <span>{f.icon}</span>
+              <span>{f.text}</span>
+            </div>
+          ))}
+        </div>
+      </main>
+
+      {/* Premium Banner */}
+      <div className="mx-6 mb-8 rounded-2xl overflow-hidden"
+        style={{ background: "linear-gradient(135deg, rgba(251,191,36,0.06) 0%, rgba(217,119,6,0.04) 100%)", border: "1px solid rgba(251,191,36,0.12)" }}>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-5">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-amber-400 font-bold text-sm uppercase tracking-widest">Premium — Coming Soon</span>
+            </div>
+            <p className="text-white/50 text-sm">AI feedback on your delivery, filler word detection, pacing analysis & more.</p>
+          </div>
+          <button
+            disabled
+            className="flex-shrink-0 px-6 py-3 rounded-xl text-sm font-bold opacity-40 cursor-not-allowed"
+            style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000" }}
+          >
+            Upgrade — $12/mo
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Scenarios Screen ─────────────────────────────────────────────────────────
+
+function ScenariosScreen({
+  onSelect,
+  onBack,
+}: {
+  onSelect: (s: Scenario) => void;
+  onBack: () => void;
+}) {
+  return (
+    <div className="min-h-screen" style={{ background: "#0a0a0f" }}>
+      <nav className="nav-blur sticky top-0 z-50 flex items-center gap-4 px-6 py-4">
+        <button onClick={onBack} className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors text-white/60 hover:text-white">
+          ← Back
+        </button>
+        <div className="flex items-center gap-2">
+          <span className="text-xl">🎤</span>
+          <span className="text-lg font-bold text-white">Speak<span className="shimmer-text">Up</span></span>
+        </div>
+      </nav>
+
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        <div className="mb-10 animate-fade-in">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">Choose your scenario</h2>
+          <p className="text-white/50">Pick a challenge. Each session makes you better.</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {SCENARIOS.map((scenario, i) => (
+            <button
+              key={scenario.id}
+              onClick={() => onSelect(scenario)}
+              className="card-hover text-left rounded-2xl p-6 glass"
+              style={{
+                animationDelay: `${i * 60}ms`,
+                animationFillMode: "both",
+                opacity: 0,
+                animation: `fadeIn 0.4s ease-out ${i * 60}ms both`,
+                borderColor: "rgba(255,255,255,0.07)",
+              }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <span className="text-4xl">{scenario.icon}</span>
+                <DifficultyBadge label={scenario.difficulty} colorClass={scenario.difficultyColor} />
+              </div>
+
+              <h3 className="text-lg font-bold text-white mb-1">{scenario.title}</h3>
+              <p className="text-sm text-white/50 mb-4 leading-relaxed">{scenario.subtitle}</p>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs text-white/40">
+                  <span>🎯</span>
+                  <span className="leading-relaxed">{scenario.trains}</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-white/40">
+                  <span>⏱</span>
+                  <span>{scenario.duration}</span>
+                </div>
+              </div>
+
+              <div className="mt-5 flex items-center gap-2 text-sm font-semibold"
+                style={{ color: "#f59e0b" }}>
+                <span>Practice this</span>
+                <span>→</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Practice Screen ──────────────────────────────────────────────────────────
+
+function PracticeScreen({
+  scenario,
+  timerDuration,
+  timeLeft,
+  timerActive,
+  timerDone,
+  improvTopic,
+  onSelectDuration,
+  onStart,
+  onPause,
+  onReset,
+  onNewTopic,
+  onBack,
+  onTeleprompter,
+}: {
+  scenario: Scenario;
+  timerDuration: number;
+  timeLeft: number;
+  timerActive: boolean;
+  timerDone: boolean;
+  improvTopic: string;
+  onSelectDuration: (s: number) => void;
+  onStart: () => void;
+  onPause: () => void;
+  onReset: () => void;
+  onNewTopic: () => void;
+  onBack: () => void;
+  onTeleprompter: () => void;
+}) {
+  return (
+    <div className="min-h-screen" style={{ background: "#0a0a0f" }}>
+      <nav className="nav-blur sticky top-0 z-50 flex items-center gap-4 px-6 py-4">
+        <button onClick={onBack} className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors text-white/60 hover:text-white text-sm">
+          ← Scenarios
+        </button>
+        <div className="flex items-center gap-2 text-2xl">{scenario.icon}
+          <span className="text-base font-bold text-white">{scenario.title}</span>
+        </div>
+        <div className="ml-auto">
+          <DifficultyBadge label={scenario.difficulty} colorClass={scenario.difficultyColor} />
+        </div>
+      </nav>
+
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+
+          {/* Left: Timer + controls */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* Improv topic */}
+            {scenario.id === "improv" && (
+              <div className="rounded-2xl p-5 animate-fade-in"
+                style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-green-400 uppercase tracking-widest">Your Topic</span>
+                  <button
+                    onClick={onNewTopic}
+                    className="text-xs text-green-400 hover:text-green-300 font-semibold transition-colors"
+                  >
+                    🎲 New Topic
+                  </button>
+                </div>
+                <p className="text-white font-semibold leading-relaxed">{improvTopic}</p>
+                <p className="text-white/40 text-xs mt-2">{scenario.tips.improv}</p>
+              </div>
+            )}
+
+            {/* Timer duration selector */}
+            <div className="glass rounded-2xl p-5">
+              <p className="text-xs font-bold text-white/40 uppercase tracking-widest mb-4">Duration</p>
+              <div className="grid grid-cols-4 gap-2">
+                {TIMER_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.seconds}
+                    onClick={() => onSelectDuration(opt.seconds)}
+                    disabled={timerActive}
+                    className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
+                      timerDuration === opt.seconds
+                        ? "text-black"
+                        : "text-white/50 hover:text-white/80 hover:bg-white/[0.06]"
+                    } ${timerActive ? "opacity-40 cursor-not-allowed" : ""}`}
+                    style={timerDuration === opt.seconds ? {
+                      background: "linear-gradient(135deg, #f59e0b, #d97706)"
+                    } : {}}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Timer display */}
+            <div className="glass rounded-2xl p-8 flex flex-col items-center gap-6">
+              <CircularTimer seconds={timeLeft} total={timerDuration} active={timerActive} />
+
+              {timerDone && (
+                <div className="text-center animate-fade-in">
+                  <p className="text-amber-400 font-bold text-lg">Time&apos;s up! 🎉</p>
+                  <p className="text-white/50 text-sm mt-1">Great practice session.</p>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                {!timerActive && !timerDone && (
+                  <button onClick={onStart} className="btn-primary px-8 py-3 rounded-xl font-bold flex items-center gap-2">
+                    <span>▶</span> Start
+                  </button>
+                )}
+                {timerActive && (
+                  <button onClick={onPause}
+                    className="px-8 py-3 rounded-xl font-bold transition-all glass hover:bg-white/[0.08]"
+                    style={{ color: "rgba(255,255,255,0.8)" }}>
+                    ⏸ Pause
+                  </button>
+                )}
+                {(timerDone || (!timerActive && timeLeft !== timerDuration)) && (
+                  <button onClick={onReset}
+                    className="px-5 py-3 rounded-xl font-semibold text-sm transition-all text-white/50 hover:text-white glass hover:bg-white/[0.06]">
+                    ↺ Reset
+                  </button>
+                )}
+                {!timerActive && !timerDone && timeLeft < timerDuration && (
+                  <button onClick={onStart}
+                    className="btn-primary px-8 py-3 rounded-xl font-bold flex items-center gap-2">
+                    <span>▶</span> Resume
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Teleprompter shortcut */}
+            <button
+              onClick={onTeleprompter}
+              className="w-full glass rounded-xl py-3 px-5 text-sm font-semibold text-white/50 hover:text-white/80 transition-all hover:bg-white/[0.06] flex items-center justify-center gap-2"
+            >
+              <span>📋</span> Open Teleprompter
+            </button>
+          </div>
+
+          {/* Right: Coaching panel */}
+          <div className="lg:col-span-3 space-y-6">
+            <div className="animate-fade-in">
+              <h2 className="text-xl font-bold text-white mb-1">Coaching for {scenario.title}</h2>
+              <p className="text-white/50 text-sm">{scenario.subtitle}</p>
+            </div>
+
+            {/* Trains */}
+            <div className="flex flex-wrap gap-2">
+              {scenario.trains.split(" · ").map((skill) => (
+                <span key={skill} className="px-3 py-1 rounded-full text-xs font-semibold"
+                  style={{ background: "rgba(251,191,36,0.1)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.2)" }}>
+                  {skill}
+                </span>
+              ))}
+            </div>
+
+            <CoachingPanel scenario={scenario} />
+
+            {/* Premium tips placeholder */}
+            <div className="rounded-2xl p-5 relative overflow-hidden"
+              style={{ background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.12)" }}>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="blur-[2px] opacity-30 text-center px-8">
+                  <p className="text-white text-sm leading-relaxed">AI-powered feedback on your pacing, filler words, vocal variety, and confidence score after each session.</p>
+                </div>
+              </div>
+              <div className="relative z-10 flex flex-col items-center justify-center py-4 gap-2">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(251,191,36,0.15)" }}>
+                  <span className="text-amber-400">✦</span>
+                </div>
+                <p className="text-amber-400 font-bold text-sm">AI Feedback — Premium</p>
+                <p className="text-white/40 text-xs text-center">Real-time analysis of your delivery coming soon.</p>
+                <button disabled className="mt-2 px-5 py-2 rounded-xl text-xs font-bold opacity-50 cursor-not-allowed"
+                  style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000" }}>
+                  Unlock Premium
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Teleprompter Screen ──────────────────────────────────────────────────────
+
+function TeleprompterScreen({
+  text,
+  setText,
+  speed,
+  setSpeed,
+  scrolling,
+  fullscreen,
+  setFullscreen,
+  onStart,
+  onStop,
+  onReset,
+  containerRef,
+  onBack,
+}: {
+  text: string;
+  setText: (t: string) => void;
+  speed: number;
+  setSpeed: (s: number) => void;
+  scrolling: boolean;
+  fullscreen: boolean;
+  setFullscreen: (f: boolean) => void;
+  onStart: () => void;
+  onStop: () => void;
+  onReset: () => void;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  onBack: () => void;
+}) {
+  const PLACEHOLDER = `Paste your speech, presentation notes, or script here.
+
+The teleprompter will scroll at your chosen speed. Use fullscreen mode for a distraction-free experience.
+
+Tip: Write in short sentences — they're easier to read at a glance while you're speaking.`;
+
+  if (fullscreen && text) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col"
+        style={{ background: "#000" }}>
+        {/* Controls bar */}
+        <div className="flex-shrink-0 flex items-center justify-between px-8 py-4"
+          style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(12px)" }}>
+          <div className="flex items-center gap-4">
+            <span className="text-white/40 text-sm font-medium">Speed</span>
+            <input
+              type="range"
+              min={10}
+              max={100}
+              value={speed}
+              onChange={(e) => setSpeed(Number(e.target.value))}
+              className="w-28"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={onReset}
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-white/50 hover:text-white transition-colors">
+              ↺ Reset
+            </button>
+            {scrolling ? (
+              <button onClick={onStop}
+                className="px-5 py-2 rounded-lg text-sm font-bold glass text-white">
+                ⏸ Pause
+              </button>
+            ) : (
+              <button onClick={onStart}
+                className="btn-primary px-5 py-2 rounded-lg text-sm font-bold">
+                ▶ Play
+              </button>
+            )}
+            <button
+              onClick={() => { onStop(); setFullscreen(false); }}
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-white/50 hover:text-white transition-colors">
+              ✕ Exit
+            </button>
+          </div>
+        </div>
+
+        {/* Text area */}
+        <div
+          ref={containerRef}
+          className="flex-1 overflow-hidden px-[10%] py-16"
+          style={{ overflowY: "hidden" }}
+        >
+          {/* Gradient masks */}
+          <div className="pointer-events-none fixed top-16 left-0 right-0 h-32 z-10"
+            style={{ background: "linear-gradient(to bottom, #000, transparent)" }} />
+          <div className="pointer-events-none fixed bottom-0 left-0 right-0 h-32 z-10"
+            style={{ background: "linear-gradient(to top, #000, transparent)" }} />
+
+          <p className="teleprompter-text text-white text-center"
+            style={{ fontSize: "clamp(1.5rem, 3vw, 2.5rem)", lineHeight: 1.7, paddingBottom: "80vh" }}>
+            {text}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen" style={{ background: "#0a0a0f" }}>
+      <nav className="nav-blur sticky top-0 z-50 flex items-center gap-4 px-6 py-4">
+        <button onClick={onBack} className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors text-white/60 hover:text-white text-sm">
+          ← Back
+        </button>
+        <div className="flex items-center gap-2">
+          <span>📋</span>
+          <span className="font-bold text-white">Teleprompter</span>
+        </div>
+      </nav>
+
+      <div className="max-w-4xl mx-auto px-6 py-10">
+        <div className="mb-8 animate-fade-in">
+          <h2 className="text-3xl font-bold text-white mb-2">Teleprompter Mode</h2>
+          <p className="text-white/50">Paste your script and read it hands-free while you present.</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Script input */}
+          <div className="lg:col-span-2">
+            <div className="glass rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
+                <span className="text-sm font-semibold text-white/60">Your Script</span>
+                {text && (
+                  <button onClick={() => setText("")} className="text-xs text-white/30 hover:text-white/60 transition-colors">
+                    Clear
+                  </button>
+                )}
+              </div>
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder={PLACEHOLDER}
+                rows={16}
+                className="w-full bg-transparent px-5 py-4 text-white/80 text-sm leading-relaxed placeholder:text-white/20 outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Controls */}
+          <div className="space-y-5">
+            {/* Speed */}
+            <div className="glass rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-semibold text-white/60">Scroll Speed</span>
+                <span className="text-sm font-bold text-amber-400">{speed}%</span>
+              </div>
+              <input
+                type="range"
+                min={10}
+                max={100}
+                value={speed}
+                onChange={(e) => setSpeed(Number(e.target.value))}
+                className="w-full"
+              />
+              <div className="flex justify-between text-xs text-white/30 mt-2">
+                <span>Slow</span>
+                <span>Fast</span>
+              </div>
+            </div>
+
+            {/* Preview / Play */}
+            <div className="glass rounded-2xl overflow-hidden">
+              <div
+                ref={containerRef}
+                className="h-40 overflow-hidden px-4 py-4 relative"
+              >
+                <div className="pointer-events-none absolute top-0 left-0 right-0 h-8 z-10"
+                  style={{ background: "linear-gradient(to bottom, rgba(15,15,26,0.9), transparent)" }} />
+                <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 z-10"
+                  style={{ background: "linear-gradient(to top, rgba(15,15,26,0.9), transparent)" }} />
+                <p className="text-white/60 text-sm leading-relaxed whitespace-pre-wrap">
+                  {text || PLACEHOLDER}
+                </p>
+              </div>
+              <div className="border-t border-white/[0.06] p-4 space-y-2">
+                <div className="flex gap-2">
+                  {scrolling ? (
+                    <button onClick={onStop}
+                      className="flex-1 glass py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:bg-white/[0.08]">
+                      ⏸ Pause
+                    </button>
+                  ) : (
+                    <button onClick={onStart} disabled={!text}
+                      className={`flex-1 btn-primary py-2.5 rounded-xl text-sm font-bold ${!text ? "opacity-30 cursor-not-allowed" : ""}`}>
+                      ▶ Play
+                    </button>
+                  )}
+                  <button onClick={onReset}
+                    className="px-4 py-2.5 rounded-xl text-sm font-semibold glass text-white/50 hover:text-white transition-colors">
+                    ↺
+                  </button>
+                </div>
+                <button
+                  onClick={() => { onStop(); onReset(); setFullscreen(true); }}
+                  disabled={!text}
+                  className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    text
+                      ? "text-amber-400 hover:bg-amber-400/[0.08]"
+                      : "text-white/20 cursor-not-allowed"
+                  }`}
+                  style={{ border: `1px solid ${text ? "rgba(251,191,36,0.25)" : "rgba(255,255,255,0.06)"}` }}
+                >
+                  ⛶ Fullscreen Mode
+                </button>
+              </div>
+            </div>
+
+            {/* Tips */}
+            <div className="glass rounded-2xl p-5 space-y-3">
+              <p className="text-xs font-bold text-white/40 uppercase tracking-widest">Pro Tips</p>
+              {[
+                "Use short sentences for easier reading",
+                "Mark pauses with // or —",
+                "Bold key words in your mind, not on screen",
+                "Practice without scrolling first",
+              ].map((tip, i) => (
+                <div key={i} className="flex gap-2 text-xs text-white/50 leading-relaxed">
+                  <span className="text-amber-400/60 mt-0.5">•</span>
+                  <span>{tip}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
