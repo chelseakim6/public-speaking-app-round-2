@@ -1031,7 +1031,8 @@ function PracticeScreen({
   const isPaused = !timerActive && !timerDone && timeLeft < timerDuration && timeLeft > 0;
   const isNeverStarted = !timerActive && !timerDone && timeLeft === timerDuration;
   const wordCount = transcript.trim() ? transcript.trim().split(/\s+/).length : 0;
-  const canAnalyze = timerDone && wordCount >= 5 && !isAnalyzing;
+  const sessionStopped = !timerActive && (timerDone || timeLeft < timerDuration);
+  const canAnalyze = sessionStopped && wordCount >= 5 && !isAnalyzing;
 
   return (
     <div className="min-h-screen" style={{ background: "#0a0a0f" }}>
@@ -1154,7 +1155,7 @@ function PracticeScreen({
 
             {coachingReport && <CoachingResults report={coachingReport} onRedo={onClearReport} />}
 
-            {timerDone && !coachingReport && !isAnalyzing && (
+            {sessionStopped && !coachingReport && !isAnalyzing && (
               <div className="rounded-2xl p-5 animate-fade-in"
                 style={{ background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.18)" }}>
                 <div className="flex items-start gap-3 mb-4">
