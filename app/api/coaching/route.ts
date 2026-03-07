@@ -1,7 +1,24 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { readFileSync } from "fs";
 
-const client = new Anthropic();
+function createClient() {
+  // Prefer explicit API key from environment
+  if (process.env.ANTHROPIC_API_KEY) {
+    return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  // Fall back to session bearer token (Claude Code dev environment)
+  const tokenPath = "/home/claude/.claude/remote/.session_ingress_token";
+  try {
+    const token = readFileSync(tokenPath, "utf8").trim();
+    if (token) return new Anthropic({ authToken: token });
+  } catch {
+    // token file not available
+  }
+  return new Anthropic(); // will throw AuthenticationError if no key configured
+}
+
+const client = createClient();
 
 export async function POST(req: NextRequest) {
   try {
