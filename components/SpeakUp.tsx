@@ -24,6 +24,17 @@ interface Scenario {
   };
 }
 
+interface CoachingReport {
+  overallScore: number;
+  summary: string;
+  scores: { clarity: number; confidence: number; structure: number; delivery: number };
+  fillerWords: { count: number; words: Array<{ word: string; count: number }>; impact: string };
+  pacing: { assessment: string; wordsPerMinute: number; suggestion: string };
+  strengths: string[];
+  improvements: string[];
+  oneThingToFocus: string;
+}
+
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 const SCENARIOS: Scenario[] = [
@@ -459,177 +470,219 @@ export default function SpeakUp() {
   const [streak, setStreak] = useState(0);
   const [improvTopic, setImprovTopic] = useState("");
 
-  // Timer state
+  // Timer
   const [timerDuration, setTimerDuration] = useState(60);
   const [timeLeft, setTimeLeft] = useState(60);
   const [timerActive, setTimerActive] = useState(false);
   const [timerDone, setTimerDone] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const chimeRef = useRef<AudioContext | null>(null);
+  const timerActiveRef = useRef(false);
 
-  // Teleprompter state
+  // Transcription
+  const [transcript, setTranscript] = useState("");
+  const [interimText, setInterimText] = useState("");
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const recognitionRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+  const intentionalStopRef = useRef(false);
+
+  // AI coaching
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [coachingReport, setCoachingReport] = useState<CoachingReport | null>(null);
+  const [coachingError, setCoachingError] = useState<string | null>(null);
+
+  // Teleprompter
   const [promptText, setPromptText] = useState("");
   const [promptSpeed, setPromptSpeed] = useState(50);
   const [promptScrolling, setPromptScrolling] = useState(false);
   const [promptFullscreen, setPromptFullscreen] = useState(false);
-  const promptRef = useRef<HTMLDivElement>(null);
   const promptContainerRef = useRef<HTMLDivElement>(null);
   const scrollAnimRef = useRef<number | null>(null);
   const scrollPosRef = useRef(0);
 
-  // Load streak on mount
+  // Keep timerActiveRef in sync (needed inside SpeechRecognition closures)
+  useEffect(() => { timerActiveRef.current = timerActive; }, [timerActive]);
+
+  // Detect SpeechRecognition support on mount
   useEffect(() => {
-    const data = getStreakData();
-    setStreak(data.count);
+    const w = window as unknown as Record<string, unknown>;
+    setSpeechSupported(!!(w.SpeechRecognition || w.webkitSpeechRecognition));
+    setStreak(getStreakData().count);
   }, []);
 
-  // Random improv topic
   const newImprovTopic = useCallback(() => {
-    const idx = Math.floor(Math.random() * IMPROV_TOPICS.length);
-    setImprovTopic(IMPROV_TOPICS[idx]);
+    setImprovTopic(IMPROV_TOPICS[Math.floor(Math.random() * IMPROV_TOPICS.length)]);
   }, []);
 
-  // Timer logic
+  // ── Timer tick ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (timerActive && timeLeft > 0) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft((t) => {
-          if (t <= 1) {
-            clearInterval(timerRef.current!);
-            setTimerActive(false);
-            setTimerDone(true);
-            playChime();
-            return 0;
-          }
-          return t - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [timerActive]);
+    if (!timerActive || timeLeft <= 0) return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 1) {
+          clearInterval(timerRef.current!);
+          setTimerActive(false);
+          timerActiveRef.current = false;
+          setTimerDone(true);
+          stopTranscription(false);
+          playChime();
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [timerActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function playChime() {
     try {
       const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
-      notes.forEach((freq, i) => {
+      [523.25, 659.25, 783.99].forEach((freq, i) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        const start = ctx.currentTime + i * 0.18;
-        gain.gain.setValueAtTime(0, start);
-        gain.gain.linearRampToValueAtTime(0.18, start + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.8);
-        osc.start(start);
-        osc.stop(start + 0.9);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = "sine"; osc.frequency.value = freq;
+        const s = ctx.currentTime + i * 0.18;
+        gain.gain.setValueAtTime(0, s);
+        gain.gain.linearRampToValueAtTime(0.18, s + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, s + 0.8);
+        osc.start(s); osc.stop(s + 0.9);
       });
-    } catch {
-      // Silently ignore if audio not available
-    }
+    } catch { /* ignore */ }
   }
 
+  // ── Transcription ───────────────────────────────────────────────────────────
+  const startTranscription = useCallback(() => {
+    const w = window as unknown as Record<string, unknown>;
+    const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!SR) return;
+    intentionalStopRef.current = false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rec = new (SR as any)();
+    rec.continuous = true; rec.interimResults = true; rec.lang = "en-US";
+    rec.onresult = (ev: { resultIndex: number; results: { isFinal: boolean; 0: { transcript: string } }[] }) => {
+      let fin = ""; let int = "";
+      for (let i = ev.resultIndex; i < ev.results.length; i++) {
+        ev.results[i].isFinal ? (fin += ev.results[i][0].transcript + " ") : (int += ev.results[i][0].transcript);
+      }
+      if (fin) setTranscript((p) => p + fin);
+      setInterimText(int);
+    };
+    rec.onend = () => {
+      setInterimText("");
+      if (!intentionalStopRef.current && timerActiveRef.current) { try { rec.start(); } catch { /* ignore */ } }
+    };
+    rec.onerror = (ev: { error: string }) => {
+      if (ev.error !== "no-speech" && ev.error !== "aborted") console.warn("SR:", ev.error);
+    };
+    recognitionRef.current = rec;
+    try { rec.start(); } catch { /* ignore */ }
+  }, []);
+
+  const stopTranscription = useCallback((clearText = false) => {
+    intentionalStopRef.current = true;
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    setInterimText("");
+    if (clearText) setTranscript("");
+  }, []);
+
+  // ── Timer controls ──────────────────────────────────────────────────────────
   function startTimer() {
-    setTimeLeft(timerDuration);
-    setTimerDone(false);
-    setTimerActive(true);
-    // Update streak on practice start
-    const newStreak = updateStreak();
-    setStreak(newStreak);
+    setTimeLeft(timerDuration); setTimerDone(false); setTimerActive(true);
+    timerActiveRef.current = true;
+    setTranscript(""); setCoachingReport(null); setCoachingError(null);
+    startTranscription();
+    setStreak(updateStreak());
+  }
+
+  function resumeTimer() {
+    setTimerActive(true); timerActiveRef.current = true;
+    startTranscription();
   }
 
   function pauseTimer() {
-    setTimerActive(false);
     if (timerRef.current) clearInterval(timerRef.current);
+    setTimerActive(false); timerActiveRef.current = false;
+    stopTranscription(false);
   }
 
   function resetTimer() {
-    setTimerActive(false);
-    setTimerDone(false);
     if (timerRef.current) clearInterval(timerRef.current);
+    setTimerActive(false); setTimerDone(false); timerActiveRef.current = false;
     setTimeLeft(timerDuration);
+    stopTranscription(true);
+    setCoachingReport(null); setCoachingError(null);
   }
 
   function selectTimerDuration(s: number) {
-    setTimerDuration(s);
-    setTimeLeft(s);
-    resetTimer();
+    if (timerRef.current) clearInterval(timerRef.current);
+    setTimerDuration(s); setTimeLeft(s);
+    setTimerActive(false); setTimerDone(false); timerActiveRef.current = false;
+    stopTranscription(true);
+    setCoachingReport(null); setCoachingError(null);
   }
 
-  // Teleprompter scroll logic
-  const startScroll = useCallback(() => {
-    setPromptScrolling(true);
-  }, []);
+  // ── AI Analysis ─────────────────────────────────────────────────────────────
+  const analyzeWithAI = useCallback(async () => {
+    if (!selectedScenario || !transcript.trim()) return;
+    setIsAnalyzing(true); setCoachingError(null);
+    try {
+      const res = await fetch("/api/coaching", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript: transcript.trim(), scenarioTitle: selectedScenario.title, duration: timerDuration }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "Analysis failed"); }
+      setCoachingReport(await res.json());
+    } catch (e) {
+      setCoachingError(e instanceof Error ? e.message : "Analysis failed. Please try again.");
+    } finally { setIsAnalyzing(false); }
+  }, [selectedScenario, transcript, timerDuration]);
 
+  // ── Teleprompter scroll ─────────────────────────────────────────────────────
+  const startScroll = useCallback(() => setPromptScrolling(true), []);
   const stopScroll = useCallback(() => {
     setPromptScrolling(false);
-    if (scrollAnimRef.current) {
-      cancelAnimationFrame(scrollAnimRef.current);
-      scrollAnimRef.current = null;
-    }
+    if (scrollAnimRef.current) { cancelAnimationFrame(scrollAnimRef.current); scrollAnimRef.current = null; }
   }, []);
 
   useEffect(() => {
     if (!promptScrolling || !promptContainerRef.current) return;
-
     const container = promptContainerRef.current;
     const maxScroll = container.scrollHeight - container.clientHeight;
-    const pxPerMs = (promptSpeed / 50) * 0.06; // ~60px/s at speed=50
-
+    const pxPerMs = (promptSpeed / 50) * 0.06;
     let last = performance.now();
-
     function tick(now: number) {
-      const dt = now - last;
-      last = now;
+      const dt = now - last; last = now;
       scrollPosRef.current = Math.min(scrollPosRef.current + pxPerMs * dt, maxScroll);
       container.scrollTop = scrollPosRef.current;
-      if (scrollPosRef.current < maxScroll) {
-        scrollAnimRef.current = requestAnimationFrame(tick);
-      } else {
-        setPromptScrolling(false);
-      }
+      scrollPosRef.current < maxScroll
+        ? (scrollAnimRef.current = requestAnimationFrame(tick))
+        : setPromptScrolling(false);
     }
-
     scrollAnimRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (scrollAnimRef.current) cancelAnimationFrame(scrollAnimRef.current);
-    };
+    return () => { if (scrollAnimRef.current) cancelAnimationFrame(scrollAnimRef.current); };
   }, [promptScrolling, promptSpeed]);
 
   function resetScroll() {
-    stopScroll();
-    scrollPosRef.current = 0;
+    stopScroll(); scrollPosRef.current = 0;
     if (promptContainerRef.current) promptContainerRef.current.scrollTop = 0;
   }
 
-  // Navigate to practice screen
   function openScenario(scenario: Scenario) {
-    setSelectedScenario(scenario);
-    resetTimer();
+    setSelectedScenario(scenario); resetTimer();
     if (scenario.id === "improv") newImprovTopic();
     setScreen("practice");
   }
 
-  // Render screens
   if (screen === "teleprompter") {
     return (
       <TeleprompterScreen
-        text={promptText}
-        setText={setPromptText}
-        speed={promptSpeed}
-        setSpeed={setPromptSpeed}
-        scrolling={promptScrolling}
-        fullscreen={promptFullscreen}
-        setFullscreen={setPromptFullscreen}
-        onStart={startScroll}
-        onStop={stopScroll}
-        onReset={resetScroll}
-        containerRef={promptContainerRef}
-        onBack={() => setScreen("home")}
+        text={promptText} setText={setPromptText}
+        speed={promptSpeed} setSpeed={setPromptSpeed}
+        scrolling={promptScrolling} fullscreen={promptFullscreen} setFullscreen={setPromptFullscreen}
+        onStart={startScroll} onStop={stopScroll} onReset={resetScroll}
+        containerRef={promptContainerRef} onBack={() => setScreen("home")}
       />
     );
   }
@@ -638,41 +691,26 @@ export default function SpeakUp() {
     return (
       <PracticeScreen
         scenario={selectedScenario}
-        timerDuration={timerDuration}
-        timeLeft={timeLeft}
-        timerActive={timerActive}
-        timerDone={timerDone}
+        timerDuration={timerDuration} timeLeft={timeLeft} timerActive={timerActive} timerDone={timerDone}
         improvTopic={improvTopic}
+        transcript={transcript} interimText={interimText} speechSupported={speechSupported}
+        isAnalyzing={isAnalyzing} coachingReport={coachingReport} coachingError={coachingError}
         onSelectDuration={selectTimerDuration}
-        onStart={startTimer}
-        onPause={pauseTimer}
-        onReset={resetTimer}
-        onNewTopic={newImprovTopic}
-        onBack={() => {
-          resetTimer();
-          setScreen("scenarios");
-        }}
+        onStart={startTimer} onResume={resumeTimer} onPause={pauseTimer} onReset={resetTimer}
+        onNewTopic={newImprovTopic} onAnalyze={analyzeWithAI}
+        onTranscriptChange={setTranscript}
+        onClearReport={() => { setCoachingReport(null); setCoachingError(null); }}
+        onBack={() => { resetTimer(); setScreen("scenarios"); }}
         onTeleprompter={() => setScreen("teleprompter")}
       />
     );
   }
 
   if (screen === "scenarios") {
-    return (
-      <ScenariosScreen
-        onSelect={openScenario}
-        onBack={() => setScreen("home")}
-      />
-    );
+    return <ScenariosScreen onSelect={openScenario} onBack={() => setScreen("home")} />;
   }
 
-  return (
-    <HomeScreen
-      streak={streak}
-      onStart={() => setScreen("scenarios")}
-      onTeleprompter={() => setScreen("teleprompter")}
-    />
-  );
+  return <HomeScreen streak={streak} onStart={() => setScreen("scenarios")} onTeleprompter={() => setScreen("teleprompter")} />;
 }
 
 // ─── Home Screen ─────────────────────────────────────────────────────────────
@@ -763,9 +801,9 @@ function HomeScreen({
           style={{ animationDelay: "0.3s", animationFillMode: "both", opacity: 0 }}>
           {[
             { icon: "🎯", text: "7 Scenarios" },
+            { icon: "🤖", text: "AI Coaching" },
             { icon: "⏱️", text: "Practice Timer" },
             { icon: "📋", text: "Teleprompter" },
-            { icon: "🧠", text: "Coaching Tips" },
             { icon: "🔥", text: "Daily Streaks" },
           ].map((f) => (
             <div key={f.text} className="glass flex items-center gap-2 px-4 py-2 rounded-full text-sm text-white/60">
@@ -776,22 +814,19 @@ function HomeScreen({
         </div>
       </main>
 
-      {/* Premium Banner */}
+      {/* AI Coaching banner */}
       <div className="mx-6 mb-8 rounded-2xl overflow-hidden"
-        style={{ background: "linear-gradient(135deg, rgba(251,191,36,0.06) 0%, rgba(217,119,6,0.04) 100%)", border: "1px solid rgba(251,191,36,0.12)" }}>
+        style={{ background: "linear-gradient(135deg, rgba(251,191,36,0.07) 0%, rgba(16,185,129,0.04) 100%)", border: "1px solid rgba(251,191,36,0.14)" }}>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-5">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-amber-400 font-bold text-sm uppercase tracking-widest">Premium — Coming Soon</span>
+              <span className="text-amber-400">✦</span>
+              <span className="text-amber-400 font-bold text-sm uppercase tracking-widest">AI Coaching Included</span>
             </div>
-            <p className="text-white/50 text-sm">AI feedback on your delivery, filler word detection, pacing analysis & more.</p>
+            <p className="text-white/50 text-sm">After each session, Claude analyzes your speech for filler words, pacing, structure, and delivery — with a personalized score and action plan.</p>
           </div>
-          <button
-            disabled
-            className="flex-shrink-0 px-6 py-3 rounded-xl text-sm font-bold opacity-40 cursor-not-allowed"
-            style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000" }}
-          >
-            Upgrade — $12/mo
+          <button onClick={onStart} className="flex-shrink-0 btn-primary px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap">
+            Try it now →
           </button>
         </div>
       </div>
@@ -872,187 +907,295 @@ function ScenariosScreen({
   );
 }
 
+// ─── AI Coaching Results ──────────────────────────────────────────────────────
+
+function ScoreBar({ label, score }: { label: string; score: number }) {
+  const color = score >= 80 ? "#10b981" : score >= 60 ? "#f59e0b" : "#ef4444";
+  const grade = score >= 85 ? "Excellent" : score >= 70 ? "Good" : score >= 55 ? "Fair" : "Needs Work";
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-between items-center">
+        <span className="text-xs text-white/60">{label}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold" style={{ color }}>{grade}</span>
+          <span className="text-xs text-white/30 tabular-nums w-6 text-right">{score}</span>
+        </div>
+      </div>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+        <div className="h-full rounded-full" style={{ width: `${score}%`, background: color, transition: "width 0.9s ease" }} />
+      </div>
+    </div>
+  );
+}
+
+function CoachingResults({ report, onRedo }: { report: CoachingReport; onRedo: () => void }) {
+  const overallColor = report.overallScore >= 80 ? "#10b981" : report.overallScore >= 60 ? "#f59e0b" : "#ef4444";
+  const pacingColor = report.pacing.assessment === "good" ? "#10b981" : "#f59e0b";
+  const fillerColor = report.fillerWords.count === 0 ? "#10b981" : report.fillerWords.count <= 4 ? "#f59e0b" : "#ef4444";
+  return (
+    <div className="glass rounded-2xl overflow-hidden animate-fade-in">
+      <div className="px-5 py-4 border-b border-white/[0.06] flex items-center gap-3" style={{ background: "rgba(251,191,36,0.04)" }}>
+        <span className="text-amber-400 text-lg">✦</span>
+        <span className="font-bold text-white">AI Coaching Report</span>
+        <div className="ml-auto flex items-center gap-3">
+          <span className="text-xs px-2.5 py-1 rounded-full font-bold"
+            style={{ background: `${overallColor}18`, color: overallColor, border: `1px solid ${overallColor}35` }}>
+            {report.overallScore}/100
+          </span>
+          <button onClick={onRedo} className="text-xs text-white/35 hover:text-white/65 transition-colors">↺ Retry</button>
+        </div>
+      </div>
+      <div className="px-5 py-5 flex gap-4 items-start border-b border-white/[0.06]">
+        <div className="flex-shrink-0 w-[72px] h-[72px] rounded-full flex flex-col items-center justify-center"
+          style={{ background: `${overallColor}12`, border: `2px solid ${overallColor}35` }}>
+          <span className="text-2xl font-bold leading-none" style={{ color: overallColor }}>{report.overallScore}</span>
+          <span className="text-[10px] text-white/40 mt-0.5">score</span>
+        </div>
+        <p className="text-sm text-white/70 leading-relaxed flex-1">{report.summary}</p>
+      </div>
+      <div className="px-5 py-5 space-y-3 border-b border-white/[0.06]">
+        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Score Breakdown</p>
+        <ScoreBar label="Clarity" score={report.scores.clarity} />
+        <ScoreBar label="Confidence" score={report.scores.confidence} />
+        <ScoreBar label="Structure" score={report.scores.structure} />
+        <ScoreBar label="Delivery" score={report.scores.delivery} />
+      </div>
+      <div className="grid grid-cols-2 divide-x divide-white/[0.06] border-b border-white/[0.06]">
+        <div className="px-5 py-5">
+          <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Filler Words</p>
+          <p className="text-3xl font-bold mb-2" style={{ color: fillerColor }}>{report.fillerWords.count}</p>
+          {report.fillerWords.words.length > 0 ? (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {report.fillerWords.words.slice(0, 4).map((w) => (
+                <span key={w.word} className="text-[10px] px-1.5 py-0.5 rounded font-mono"
+                  style={{ background: "rgba(239,68,68,0.12)", color: "#fca5a5" }}>{w.word} ×{w.count}</span>
+              ))}
+            </div>
+          ) : <p className="text-xs text-green-400 mb-2">None detected 🎉</p>}
+          <p className="text-[11px] text-white/40 leading-relaxed">{report.fillerWords.impact}</p>
+        </div>
+        <div className="px-5 py-5">
+          <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Pacing</p>
+          <p className="text-3xl font-bold text-white mb-2">{report.pacing.wordsPerMinute}<span className="text-sm text-white/40 ml-1">WPM</span></p>
+          <span className="text-xs font-semibold capitalize px-2 py-0.5 rounded-full"
+            style={{ background: `${pacingColor}15`, color: pacingColor }}>{report.pacing.assessment}</span>
+          <p className="text-[11px] text-white/40 leading-relaxed mt-2">{report.pacing.suggestion}</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.06] border-b border-white/[0.06]">
+        <div className="px-5 py-5">
+          <p className="text-[10px] font-bold text-green-400 uppercase tracking-widest mb-3">✅ Strengths</p>
+          <ul className="space-y-2">
+            {report.strengths.map((s, i) => (
+              <li key={i} className="flex gap-2 text-xs text-white/65 leading-relaxed">
+                <span className="text-green-400 flex-shrink-0 mt-0.5">•</span><span>{s}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="px-5 py-5">
+          <p className="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-3">⚡ Improve</p>
+          <ul className="space-y-2">
+            {report.improvements.map((imp, i) => (
+              <li key={i} className="flex gap-2 text-xs text-white/65 leading-relaxed">
+                <span className="text-amber-400 flex-shrink-0 mt-0.5">•</span><span>{imp}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <div className="px-5 py-5" style={{ background: "rgba(251,191,36,0.03)" }}>
+        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">🎯 Focus Next Session On</p>
+        <p className="text-sm font-semibold text-amber-300 leading-relaxed">{report.oneThingToFocus}</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Practice Screen ──────────────────────────────────────────────────────────
 
 function PracticeScreen({
-  scenario,
-  timerDuration,
-  timeLeft,
-  timerActive,
-  timerDone,
-  improvTopic,
-  onSelectDuration,
-  onStart,
-  onPause,
-  onReset,
-  onNewTopic,
-  onBack,
-  onTeleprompter,
+  scenario, timerDuration, timeLeft, timerActive, timerDone, improvTopic,
+  transcript, interimText, speechSupported, isAnalyzing, coachingReport, coachingError,
+  onSelectDuration, onStart, onResume, onPause, onReset, onNewTopic, onAnalyze,
+  onTranscriptChange, onClearReport, onBack, onTeleprompter,
 }: {
-  scenario: Scenario;
-  timerDuration: number;
-  timeLeft: number;
-  timerActive: boolean;
-  timerDone: boolean;
-  improvTopic: string;
-  onSelectDuration: (s: number) => void;
-  onStart: () => void;
-  onPause: () => void;
-  onReset: () => void;
-  onNewTopic: () => void;
-  onBack: () => void;
-  onTeleprompter: () => void;
+  scenario: Scenario; timerDuration: number; timeLeft: number; timerActive: boolean; timerDone: boolean;
+  improvTopic: string; transcript: string; interimText: string; speechSupported: boolean;
+  isAnalyzing: boolean; coachingReport: CoachingReport | null; coachingError: string | null;
+  onSelectDuration: (s: number) => void; onStart: () => void; onResume: () => void;
+  onPause: () => void; onReset: () => void; onNewTopic: () => void; onAnalyze: () => void;
+  onTranscriptChange: (t: string) => void; onClearReport: () => void;
+  onBack: () => void; onTeleprompter: () => void;
 }) {
+  const isPaused = !timerActive && !timerDone && timeLeft < timerDuration && timeLeft > 0;
+  const isNeverStarted = !timerActive && !timerDone && timeLeft === timerDuration;
+  const wordCount = transcript.trim() ? transcript.trim().split(/\s+/).length : 0;
+  const canAnalyze = timerDone && wordCount >= 5 && !isAnalyzing;
+
   return (
     <div className="min-h-screen" style={{ background: "#0a0a0f" }}>
       <nav className="nav-blur sticky top-0 z-50 flex items-center gap-4 px-6 py-4">
         <button onClick={onBack} className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors text-white/60 hover:text-white text-sm">
           ← Scenarios
         </button>
-        <div className="flex items-center gap-2 text-2xl">{scenario.icon}
-          <span className="text-base font-bold text-white">{scenario.title}</span>
-        </div>
-        <div className="ml-auto">
-          <DifficultyBadge label={scenario.difficulty} colorClass={scenario.difficultyColor} />
-        </div>
+        <span className="text-xl">{scenario.icon}</span>
+        <span className="text-base font-bold text-white">{scenario.title}</span>
+        <div className="ml-auto"><DifficultyBadge label={scenario.difficulty} colorClass={scenario.difficultyColor} /></div>
       </nav>
 
       <div className="max-w-5xl mx-auto px-6 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
 
-          {/* Left: Timer + controls */}
-          <div className="lg:col-span-2 space-y-6">
-
-            {/* Improv topic */}
+          {/* ── Left: Timer + transcript ── */}
+          <div className="lg:col-span-2 space-y-5">
             {scenario.id === "improv" && (
               <div className="rounded-2xl p-5 animate-fade-in"
                 style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-bold text-green-400 uppercase tracking-widest">Your Topic</span>
-                  <button
-                    onClick={onNewTopic}
-                    className="text-xs text-green-400 hover:text-green-300 font-semibold transition-colors"
-                  >
-                    🎲 New Topic
-                  </button>
+                  <button onClick={onNewTopic} className="text-xs text-green-400 hover:text-green-300 font-semibold transition-colors">🎲 New Topic</button>
                 </div>
                 <p className="text-white font-semibold leading-relaxed">{improvTopic}</p>
                 <p className="text-white/40 text-xs mt-2">{scenario.tips.improv}</p>
               </div>
             )}
 
-            {/* Timer duration selector */}
             <div className="glass rounded-2xl p-5">
               <p className="text-xs font-bold text-white/40 uppercase tracking-widest mb-4">Duration</p>
               <div className="grid grid-cols-4 gap-2">
                 {TIMER_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.seconds}
-                    onClick={() => onSelectDuration(opt.seconds)}
-                    disabled={timerActive}
-                    className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
-                      timerDuration === opt.seconds
-                        ? "text-black"
-                        : "text-white/50 hover:text-white/80 hover:bg-white/[0.06]"
-                    } ${timerActive ? "opacity-40 cursor-not-allowed" : ""}`}
-                    style={timerDuration === opt.seconds ? {
-                      background: "linear-gradient(135deg, #f59e0b, #d97706)"
-                    } : {}}
-                  >
+                  <button key={opt.seconds} onClick={() => onSelectDuration(opt.seconds)} disabled={timerActive}
+                    className={`py-2.5 rounded-xl text-sm font-bold transition-all ${timerDuration === opt.seconds ? "text-black" : "text-white/50 hover:text-white/80 hover:bg-white/[0.06]"} ${timerActive ? "opacity-40 cursor-not-allowed" : ""}`}
+                    style={timerDuration === opt.seconds ? { background: "linear-gradient(135deg, #f59e0b, #d97706)" } : {}}>
                     {opt.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Timer display */}
             <div className="glass rounded-2xl p-8 flex flex-col items-center gap-6">
               <CircularTimer seconds={timeLeft} total={timerDuration} active={timerActive} />
-
               {timerDone && (
                 <div className="text-center animate-fade-in">
                   <p className="text-amber-400 font-bold text-lg">Time&apos;s up! 🎉</p>
-                  <p className="text-white/50 text-sm mt-1">Great practice session.</p>
+                  <p className="text-white/40 text-sm mt-1">{wordCount > 0 ? `${wordCount} words captured` : "Get AI coaching →"}</p>
                 </div>
               )}
-
               <div className="flex items-center gap-3">
-                {!timerActive && !timerDone && (
-                  <button onClick={onStart} className="btn-primary px-8 py-3 rounded-xl font-bold flex items-center gap-2">
-                    <span>▶</span> Start
-                  </button>
+                {isNeverStarted && (
+                  <button onClick={onStart} className="btn-primary px-8 py-3 rounded-xl font-bold flex items-center gap-2"><span>▶</span> Start</button>
                 )}
                 {timerActive && (
-                  <button onClick={onPause}
-                    className="px-8 py-3 rounded-xl font-bold transition-all glass hover:bg-white/[0.08]"
-                    style={{ color: "rgba(255,255,255,0.8)" }}>
-                    ⏸ Pause
-                  </button>
+                  <button onClick={onPause} className="px-8 py-3 rounded-xl font-bold glass hover:bg-white/[0.08] transition-all" style={{ color: "rgba(255,255,255,0.8)" }}>⏸ Pause</button>
                 )}
-                {(timerDone || (!timerActive && timeLeft !== timerDuration)) && (
-                  <button onClick={onReset}
-                    className="px-5 py-3 rounded-xl font-semibold text-sm transition-all text-white/50 hover:text-white glass hover:bg-white/[0.06]">
-                    ↺ Reset
-                  </button>
+                {isPaused && (
+                  <>
+                    <button onClick={onResume} className="btn-primary px-8 py-3 rounded-xl font-bold flex items-center gap-2"><span>▶</span> Resume</button>
+                    <button onClick={onReset} className="px-5 py-3 rounded-xl text-sm glass text-white/50 hover:text-white transition-all">↺</button>
+                  </>
                 )}
-                {!timerActive && !timerDone && timeLeft < timerDuration && (
-                  <button onClick={onStart}
-                    className="btn-primary px-8 py-3 rounded-xl font-bold flex items-center gap-2">
-                    <span>▶</span> Resume
-                  </button>
+                {timerDone && (
+                  <button onClick={onReset} className="px-5 py-3 rounded-xl text-sm glass text-white/50 hover:text-white transition-all">↺ Reset</button>
                 )}
               </div>
             </div>
 
-            {/* Teleprompter shortcut */}
-            <button
-              onClick={onTeleprompter}
-              className="w-full glass rounded-xl py-3 px-5 text-sm font-semibold text-white/50 hover:text-white/80 transition-all hover:bg-white/[0.06] flex items-center justify-center gap-2"
-            >
+            {/* Live transcript */}
+            <div className="glass rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
+                <div className="flex items-center gap-2">
+                  {timerActive && speechSupported && <div className="w-2 h-2 rounded-full bg-red-500 animate-timer-pulse" />}
+                  <span className="text-xs font-semibold text-white/60">{timerActive && speechSupported ? "Recording…" : "Your Speech"}</span>
+                </div>
+                {wordCount > 0 && <span className="text-xs text-white/30">{wordCount} words</span>}
+              </div>
+              {speechSupported ? (
+                <div className="h-28 overflow-y-auto px-4 py-3 scrollbar-hide">
+                  {transcript || interimText ? (
+                    <p className="text-sm text-white/70 leading-relaxed">
+                      {transcript}
+                      {interimText && <span className="text-white/30 italic">{interimText}</span>}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-white/25 italic">
+                      {timerActive ? "Start speaking — your words appear here…" : "Start the timer and speak. Your transcript appears here."}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="px-4 py-3">
+                  <p className="text-xs text-white/30 mb-2">Auto-transcription requires Chrome. Type your speech to analyze:</p>
+                  <textarea value={transcript} onChange={(e) => onTranscriptChange(e.target.value)}
+                    placeholder="Paste or type what you said…" rows={4}
+                    className="w-full bg-transparent text-sm text-white/70 placeholder:text-white/20 outline-none resize-none" />
+                </div>
+              )}
+            </div>
+
+            <button onClick={onTeleprompter}
+              className="w-full glass rounded-xl py-3 px-5 text-sm font-semibold text-white/50 hover:text-white/80 transition-all hover:bg-white/[0.06] flex items-center justify-center gap-2">
               <span>📋</span> Open Teleprompter
             </button>
           </div>
 
-          {/* Right: Coaching panel */}
-          <div className="lg:col-span-3 space-y-6">
+          {/* ── Right: AI results / coaching tips ── */}
+          <div className="lg:col-span-3 space-y-5">
             <div className="animate-fade-in">
-              <h2 className="text-xl font-bold text-white mb-1">Coaching for {scenario.title}</h2>
+              <h2 className="text-xl font-bold text-white mb-1">{coachingReport ? "AI Coaching Report" : `Coaching for ${scenario.title}`}</h2>
               <p className="text-white/50 text-sm">{scenario.subtitle}</p>
             </div>
-
-            {/* Trains */}
             <div className="flex flex-wrap gap-2">
               {scenario.trains.split(" · ").map((skill) => (
                 <span key={skill} className="px-3 py-1 rounded-full text-xs font-semibold"
-                  style={{ background: "rgba(251,191,36,0.1)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.2)" }}>
-                  {skill}
-                </span>
+                  style={{ background: "rgba(251,191,36,0.1)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.2)" }}>{skill}</span>
               ))}
             </div>
 
-            <CoachingPanel scenario={scenario} />
+            {coachingReport && <CoachingResults report={coachingReport} onRedo={onClearReport} />}
 
-            {/* Premium tips placeholder */}
-            <div className="rounded-2xl p-5 relative overflow-hidden"
-              style={{ background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.12)" }}>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="blur-[2px] opacity-30 text-center px-8">
-                  <p className="text-white text-sm leading-relaxed">AI-powered feedback on your pacing, filler words, vocal variety, and confidence score after each session.</p>
+            {timerDone && !coachingReport && !isAnalyzing && (
+              <div className="rounded-2xl p-5 animate-fade-in"
+                style={{ background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.18)" }}>
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(251,191,36,0.12)" }}>
+                    <span className="text-amber-400 text-base">✦</span>
+                  </div>
+                  <div>
+                    <p className="text-white font-semibold text-sm mb-1">Get AI Coaching</p>
+                    <p className="text-white/50 text-xs leading-relaxed">
+                      {wordCount >= 5
+                        ? `Claude will analyze your ${wordCount}-word speech — filler words, pacing, structure, delivery — and give you a personalized score and action plan.`
+                        : "Speak for at least a few sentences to get a full analysis."}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="relative z-10 flex flex-col items-center justify-center py-4 gap-2">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ background: "rgba(251,191,36,0.15)" }}>
-                  <span className="text-amber-400">✦</span>
-                </div>
-                <p className="text-amber-400 font-bold text-sm">AI Feedback — Premium</p>
-                <p className="text-white/40 text-xs text-center">Real-time analysis of your delivery coming soon.</p>
-                <button disabled className="mt-2 px-5 py-2 rounded-xl text-xs font-bold opacity-50 cursor-not-allowed"
-                  style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#000" }}>
-                  Unlock Premium
+                {coachingError && (
+                  <div className="mb-3 px-4 py-3 rounded-xl text-sm text-red-300"
+                    style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                    {coachingError}
+                  </div>
+                )}
+                <button onClick={onAnalyze} disabled={!canAnalyze}
+                  className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${canAnalyze ? "btn-primary" : "opacity-40 cursor-not-allowed text-white/50 glass"}`}>
+                  ✦ Analyze My Speech
                 </button>
               </div>
-            </div>
+            )}
+
+            {isAnalyzing && (
+              <div className="rounded-2xl p-8 animate-fade-in flex flex-col items-center gap-4"
+                style={{ background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.12)" }}>
+                <div className="w-12 h-12 rounded-full border-2 animate-spin"
+                  style={{ borderColor: "rgba(251,191,36,0.2)", borderTopColor: "#f59e0b" }} />
+                <div className="text-center">
+                  <p className="text-white font-semibold mb-1">Claude is reviewing your speech…</p>
+                  <p className="text-white/40 text-sm">Counting filler words, checking pacing, building your report.</p>
+                </div>
+              </div>
+            )}
+
+            {!coachingReport && !isAnalyzing && <CoachingPanel scenario={scenario} />}
           </div>
         </div>
       </div>
