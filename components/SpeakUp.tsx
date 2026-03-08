@@ -44,10 +44,10 @@ const SCENARIOS: Scenario[] = [
     title: "Job Interview",
     subtitle: "Land the role with clarity and confidence",
     difficulty: "Intermediate",
-    difficultyColor: "text-blue-400 bg-blue-400/10",
+    difficultyColor: "text-[#5B82A3] bg-[#7B9BB8]/15",
     trains: "Concise storytelling · STAR method · Composure",
     duration: "2–5 min",
-    accent: "#3b82f6",
+    accent: "#7B9BB8",
     tips: {
       focus: [
         "Use the STAR method: Situation, Task, Action, Result",
@@ -75,10 +75,10 @@ const SCENARIOS: Scenario[] = [
     title: "Wedding Toast",
     subtitle: "A speech they'll remember for decades",
     difficulty: "Beginner",
-    difficultyColor: "text-pink-400 bg-pink-400/10",
+    difficultyColor: "text-[#B86E6E] bg-[#F2D4CC]/50",
     trains: "Warmth · Storytelling · Emotional delivery",
     duration: "2–4 min",
-    accent: "#ec4899",
+    accent: "#C4847A",
     tips: {
       focus: [
         "Open with a specific, vivid memory — not 'When I first met...'",
@@ -106,10 +106,10 @@ const SCENARIOS: Scenario[] = [
     title: "Investor Pitch",
     subtitle: "Convince the room your vision is fundable",
     difficulty: "Advanced",
-    difficultyColor: "text-amber-400 bg-amber-400/10",
+    difficultyColor: "text-[#C9A84C] bg-[#C9A84C]/12",
     trains: "Persuasion · Data storytelling · Handling objections",
     duration: "5–10 min",
-    accent: "#f59e0b",
+    accent: "#C9A84C",
     tips: {
       focus: [
         "Lead with the problem, not the solution",
@@ -137,10 +137,10 @@ const SCENARIOS: Scenario[] = [
     title: "TED-Style Talk",
     subtitle: "One idea worth spreading, delivered perfectly",
     difficulty: "Advanced",
-    difficultyColor: "text-amber-400 bg-amber-400/10",
+    difficultyColor: "text-[#C9A84C] bg-[#C9A84C]/12",
     trains: "Big ideas · Narrative arc · Stage presence",
     duration: "10–18 min",
-    accent: "#ef4444",
+    accent: "#B05A4A",
     tips: {
       focus: [
         "Start with a counterintuitive statement or bold claim",
@@ -168,10 +168,10 @@ const SCENARIOS: Scenario[] = [
     title: "Difficult Conversation",
     subtitle: "Navigate high-stakes talks with grace",
     difficulty: "Advanced",
-    difficultyColor: "text-amber-400 bg-amber-400/10",
+    difficultyColor: "text-[#C9A84C] bg-[#C9A84C]/12",
     trains: "Empathy · Directness · Emotional regulation",
     duration: "Variable",
-    accent: "#f97316",
+    accent: "#C98A5A",
     tips: {
       focus: [
         "Lead with care, not the issue — 'I want to talk because I respect you'",
@@ -199,10 +199,10 @@ const SCENARIOS: Scenario[] = [
     title: "Debate & Argument",
     subtitle: "Win with logic, evidence, and composure",
     difficulty: "Intermediate",
-    difficultyColor: "text-blue-400 bg-blue-400/10",
+    difficultyColor: "text-[#5B82A3] bg-[#7B9BB8]/15",
     trains: "Logical reasoning · Rebuttals · Composure under fire",
     duration: "2–5 min",
-    accent: "#8b5cf6",
+    accent: "#8B7BA8",
     tips: {
       focus: [
         "Steelman the opposing argument before dismantling it",
@@ -230,10 +230,10 @@ const SCENARIOS: Scenario[] = [
     title: "Improv Challenge",
     subtitle: "Speak on any topic, instantly, brilliantly",
     difficulty: "Variable",
-    difficultyColor: "text-green-400 bg-green-400/10",
+    difficultyColor: "text-[#5A7A54] bg-[#C8D5C0]/40",
     trains: "Quick thinking · Confidence · Adaptability",
     duration: "1–3 min",
-    accent: "#10b981",
+    accent: "#7A9F73",
     tips: {
       focus: [
         "The first thing that comes to mind is usually your best bet — commit to it",
@@ -299,7 +299,7 @@ function formatTime(seconds: number): string {
 function getStreakData(): { count: number; lastDate: string } {
   if (typeof window === "undefined") return { count: 0, lastDate: "" };
   try {
-    const raw = localStorage.getItem("speakup_streak");
+    const raw = localStorage.getItem("sono_streak");
     if (!raw) return { count: 0, lastDate: "" };
     return JSON.parse(raw);
   } catch {
@@ -322,7 +322,7 @@ function updateStreak(): number {
     newCount = 1;
   }
 
-  localStorage.setItem("speakup_streak", JSON.stringify({ count: newCount, lastDate: today }));
+  localStorage.setItem("sono_streak", JSON.stringify({ count: newCount, lastDate: today }));
   return newCount;
 }
 
@@ -332,7 +332,7 @@ function StreakBadge({ count }: { count: number }) {
   if (count === 0) return null;
   return (
     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold"
-      style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.25)", color: "#fbbf24" }}>
+      style={{ background: "rgba(201,168,76,0.1)", border: "1px solid rgba(201,168,76,0.28)", color: "#C9A84C" }}>
       <span>{count >= 7 ? "🔥" : count >= 3 ? "🔥" : "✨"}</span>
       <span>Day {count} streak</span>
     </div>
@@ -368,8 +368,8 @@ function CircularTimer({
       {active && (
         <div className="absolute inset-0 rounded-full animate-glow" style={{
           boxShadow: isLow
-            ? "0 0 40px rgba(239,68,68,0.4)"
-            : "0 0 30px rgba(251,191,36,0.25)"
+            ? "0 0 40px rgba(192,97,74,0.3)"
+            : "0 0 30px rgba(201,168,76,0.22)"
         }} />
       )}
       <svg width={160} height={160} className="absolute">
@@ -377,14 +377,14 @@ function CircularTimer({
         <circle
           cx={80} cy={80} r={radius}
           fill="none"
-          stroke="rgba(255,255,255,0.07)"
+          stroke="rgba(201,168,76,0.18)"
           strokeWidth={8}
         />
         {/* Progress ring */}
         <circle
           cx={80} cy={80} r={radius}
           fill="none"
-          stroke={isLow ? "#ef4444" : "#f59e0b"}
+          stroke={isLow ? "#C0614A" : "#C9A84C"}
           strokeWidth={8}
           strokeLinecap="round"
           strokeDasharray={circumference}
@@ -395,13 +395,13 @@ function CircularTimer({
       </svg>
       <div className="relative z-10 text-center">
         <div
-          className={`text-4xl font-bold tabular-nums ${isLow ? "text-red-400 animate-timer-pulse" : "text-white"}`}
-          style={{ fontVariantNumeric: "tabular-nums" }}
+          className={`text-4xl font-bold tabular-nums ${isLow ? "text-[#C0614A] animate-timer-pulse" : "text-[#3D2B1F]"}`}
+          style={{ fontVariantNumeric: "tabular-nums", fontFamily: "Inter, system-ui, sans-serif" }}
         >
           {formatTime(seconds)}
         </div>
         {active && (
-          <div className="text-xs text-white/40 mt-1 uppercase tracking-widest">
+          <div className="text-xs text-[#9A8A7E] mt-1 uppercase tracking-widest">
             {seconds === 0 ? "Done" : "Speaking"}
           </div>
         )}
@@ -426,17 +426,18 @@ function CoachingPanel({ scenario }: { scenario: Scenario }) {
   };
 
   return (
-    <div className="glass rounded-2xl overflow-hidden">
-      <div className="flex border-b border-white/[0.06]">
+    <div className="glass rounded-3xl overflow-hidden">
+      <div className="flex" style={{ borderBottom: "1px solid rgba(201,168,76,0.14)" }}>
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-sm font-medium transition-all ${
               tab === t.key
-                ? "text-amber-400 border-b-2 border-amber-400 -mb-px"
-                : "text-white/40 hover:text-white/70"
+                ? "-mb-px"
+                : "text-[#9A8A7E] hover:text-[#3D2B1F]/70"
             }`}
+            style={tab === t.key ? { color: "#C9A84C", borderBottom: "2px solid #C9A84C" } : {}}
           >
             <span>{t.icon}</span>
             <span className="hidden sm:inline">{t.label}</span>
@@ -451,10 +452,10 @@ function CoachingPanel({ scenario }: { scenario: Scenario }) {
             style={{ animationDelay: `${i * 60}ms`, animationFillMode: "both", opacity: 0 }}
           >
             <div className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5"
-              style={{ background: "rgba(251,191,36,0.15)", color: "#f59e0b", fontSize: 11, fontWeight: 700 }}>
+              style={{ background: "rgba(201,168,76,0.14)", color: "#C9A84C", fontSize: 11, fontWeight: 700 }}>
               {i + 1}
             </div>
-            <p className="text-sm text-white/75 leading-relaxed">{tip}</p>
+            <p className="text-sm text-[#3D2B1F]/75 leading-relaxed">{tip}</p>
           </div>
         ))}
       </div>
@@ -725,18 +726,20 @@ function HomeScreen({
   onTeleprompter: () => void;
 }) {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(135deg, #0a0a0f 0%, #0f0f1a 50%, #0a0a0f 100%)" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(160deg, #FAF7F2 0%, #F5EDE8 100%)" }}>
       {/* Nav */}
       <nav className="nav-blur sticky top-0 z-50 flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-2">
           <span className="text-2xl">🎤</span>
-          <span className="text-xl font-bold text-white">Speak<span className="shimmer-text">Up</span></span>
+          <span className="text-xl font-bold text-[#3D2B1F]" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+            <span className="shimmer-text">Sono</span>
+          </span>
         </div>
         <div className="flex items-center gap-3">
           <StreakBadge count={streak} />
           <button
             className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold opacity-50 cursor-not-allowed"
-            style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", color: "#fbbf24" }}
+            style={{ background: "rgba(201,168,76,0.08)", border: "1px solid rgba(201,168,76,0.22)", color: "#C9A84C" }}
             disabled
             title="Coming soon"
           >
@@ -752,13 +755,13 @@ function HomeScreen({
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div style={{
             position: "absolute",
-            top: "20%",
+            top: "15%",
             left: "50%",
             transform: "translateX(-50%)",
-            width: 600,
-            height: 600,
+            width: 700,
+            height: 700,
             borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(251,191,36,0.06) 0%, transparent 70%)",
+            background: "radial-gradient(circle, rgba(201,168,76,0.07) 0%, rgba(242,212,204,0.06) 50%, transparent 70%)",
           }} />
         </div>
 
@@ -769,27 +772,27 @@ function HomeScreen({
             </div>
           )}
 
-          <h1 className="text-5xl sm:text-7xl font-bold tracking-tight mb-6 leading-none">
-            <span className="text-white">Speak with</span>
+          <h1 className="text-5xl sm:text-7xl font-bold tracking-tight mb-6 leading-none text-[#3D2B1F]">
+            Speak with
             <br />
             <span className="shimmer-text">confidence.</span>
           </h1>
 
-          <p className="text-lg sm:text-xl text-white/50 max-w-xl mx-auto mb-12 leading-relaxed">
+          <p className="text-lg sm:text-xl text-[#9A8A7E] max-w-xl mx-auto mb-12 leading-relaxed" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
             Practice real speaking scenarios with expert coaching, a built-in timer, and a teleprompter — right in your browser.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
               onClick={onStart}
-              className="btn-primary px-8 py-4 rounded-2xl text-lg font-bold relative overflow-hidden"
+              className="btn-primary px-8 py-4 rounded-full text-lg font-bold relative overflow-hidden"
             >
               <span className="relative z-10">Start Practicing →</span>
             </button>
             <button
               onClick={onTeleprompter}
-              className="px-8 py-4 rounded-2xl text-lg font-semibold glass transition-all hover:border-white/20 hover:bg-white/[0.06]"
-              style={{ color: "rgba(255,255,255,0.7)" }}
+              className="px-8 py-4 rounded-full text-lg font-semibold glass transition-all"
+              style={{ color: "#9A8A7E" }}
             >
               Teleprompter Mode
             </button>
@@ -806,7 +809,7 @@ function HomeScreen({
             { icon: "📋", text: "Teleprompter" },
             { icon: "🔥", text: "Daily Streaks" },
           ].map((f) => (
-            <div key={f.text} className="glass flex items-center gap-2 px-4 py-2 rounded-full text-sm text-white/60">
+            <div key={f.text} className="glass flex items-center gap-2 px-4 py-2 rounded-full text-sm text-[#9A8A7E]">
               <span>{f.icon}</span>
               <span>{f.text}</span>
             </div>
@@ -815,17 +818,17 @@ function HomeScreen({
       </main>
 
       {/* AI Coaching banner */}
-      <div className="mx-6 mb-8 rounded-2xl overflow-hidden"
-        style={{ background: "linear-gradient(135deg, rgba(251,191,36,0.07) 0%, rgba(16,185,129,0.04) 100%)", border: "1px solid rgba(251,191,36,0.14)" }}>
+      <div className="mx-6 mb-8 rounded-3xl overflow-hidden"
+        style={{ background: "linear-gradient(135deg, rgba(201,168,76,0.07) 0%, rgba(242,212,204,0.12) 100%)", border: "1px solid rgba(201,168,76,0.18)" }}>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-5">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-amber-400">✦</span>
-              <span className="text-amber-400 font-bold text-sm uppercase tracking-widest">AI Coaching Included</span>
+              <span style={{ color: "#C9A84C" }}>✦</span>
+              <span className="font-bold text-sm uppercase tracking-widest" style={{ color: "#C9A84C" }}>AI Coaching Included</span>
             </div>
-            <p className="text-white/50 text-sm">After each session, Claude analyzes your speech for filler words, pacing, structure, and delivery — with a personalized score and action plan.</p>
+            <p className="text-[#9A8A7E] text-sm" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>After each session, Claude analyzes your speech for filler words, pacing, structure, and delivery — with a personalized score and action plan.</p>
           </div>
-          <button onClick={onStart} className="flex-shrink-0 btn-primary px-6 py-3 rounded-xl text-sm font-bold whitespace-nowrap">
+          <button onClick={onStart} className="flex-shrink-0 btn-primary px-6 py-3 rounded-full text-sm font-bold whitespace-nowrap">
             Try it now →
           </button>
         </div>
@@ -844,21 +847,24 @@ function ScenariosScreen({
   onBack: () => void;
 }) {
   return (
-    <div className="min-h-screen" style={{ background: "#0a0a0f" }}>
+    <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #FAF7F2 0%, #F5EDE8 100%)" }}>
       <nav className="nav-blur sticky top-0 z-50 flex items-center gap-4 px-6 py-4">
-        <button onClick={onBack} className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors text-white/60 hover:text-white">
+        <button onClick={onBack} className="p-2 rounded-xl transition-colors text-[#9A8A7E] hover:text-[#3D2B1F]"
+          style={{ transition: "color 0.3s ease" }}>
           ← Back
         </button>
         <div className="flex items-center gap-2">
           <span className="text-xl">🎤</span>
-          <span className="text-lg font-bold text-white">Speak<span className="shimmer-text">Up</span></span>
+          <span className="text-lg font-bold" style={{ fontFamily: "'Playfair Display', Georgia, serif", color: "#3D2B1F" }}>
+            <span className="shimmer-text">Sono</span>
+          </span>
         </div>
       </nav>
 
       <div className="max-w-6xl mx-auto px-6 py-12">
         <div className="mb-10 animate-fade-in">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">Choose your scenario</h2>
-          <p className="text-white/50">Pick a challenge. Each session makes you better.</p>
+          <h2 className="text-3xl sm:text-4xl font-bold text-[#3D2B1F] mb-3">Choose your scenario</h2>
+          <p className="text-[#9A8A7E]" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>Pick a challenge. Each session makes you better.</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -866,13 +872,13 @@ function ScenariosScreen({
             <button
               key={scenario.id}
               onClick={() => onSelect(scenario)}
-              className="card-hover text-left rounded-2xl p-6 glass"
+              className="card-hover text-left rounded-3xl p-6 glass"
               style={{
                 animationDelay: `${i * 60}ms`,
                 animationFillMode: "both",
                 opacity: 0,
                 animation: `fadeIn 0.4s ease-out ${i * 60}ms both`,
-                borderColor: "rgba(255,255,255,0.07)",
+                borderColor: "rgba(201,168,76,0.18)",
               }}
             >
               <div className="flex items-start justify-between mb-4">
@@ -880,22 +886,22 @@ function ScenariosScreen({
                 <DifficultyBadge label={scenario.difficulty} colorClass={scenario.difficultyColor} />
               </div>
 
-              <h3 className="text-lg font-bold text-white mb-1">{scenario.title}</h3>
-              <p className="text-sm text-white/50 mb-4 leading-relaxed">{scenario.subtitle}</p>
+              <h3 className="text-lg font-bold text-[#3D2B1F] mb-1">{scenario.title}</h3>
+              <p className="text-sm text-[#9A8A7E] mb-4 leading-relaxed" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>{scenario.subtitle}</p>
 
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-white/40">
+                <div className="flex items-center gap-2 text-xs text-[#9A8A7E]/80">
                   <span>🎯</span>
                   <span className="leading-relaxed">{scenario.trains}</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-white/40">
+                <div className="flex items-center gap-2 text-xs text-[#9A8A7E]/80">
                   <span>⏱</span>
                   <span>{scenario.duration}</span>
                 </div>
               </div>
 
               <div className="mt-5 flex items-center gap-2 text-sm font-semibold"
-                style={{ color: "#f59e0b" }}>
+                style={{ color: "#C9A84C" }}>
                 <span>Practice this</span>
                 <span>→</span>
               </div>
@@ -910,18 +916,18 @@ function ScenariosScreen({
 // ─── AI Coaching Results ──────────────────────────────────────────────────────
 
 function ScoreBar({ label, score }: { label: string; score: number }) {
-  const color = score >= 80 ? "#10b981" : score >= 60 ? "#f59e0b" : "#ef4444";
+  const color = score >= 80 ? "#7A9F73" : score >= 60 ? "#C9A84C" : "#C0614A";
   const grade = score >= 85 ? "Excellent" : score >= 70 ? "Good" : score >= 55 ? "Fair" : "Needs Work";
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between items-center">
-        <span className="text-xs text-white/60">{label}</span>
+        <span className="text-xs text-[#9A8A7E]">{label}</span>
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold" style={{ color }}>{grade}</span>
-          <span className="text-xs text-white/30 tabular-nums w-6 text-right">{score}</span>
+          <span className="text-xs text-[#9A8A7E]/60 tabular-nums w-6 text-right">{score}</span>
         </div>
       </div>
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(201,168,76,0.12)" }}>
         <div className="h-full rounded-full" style={{ width: `${score}%`, background: color, transition: "width 0.9s ease" }} />
       </div>
     </div>
@@ -929,84 +935,84 @@ function ScoreBar({ label, score }: { label: string; score: number }) {
 }
 
 function CoachingResults({ report, onRedo }: { report: CoachingReport; onRedo: () => void }) {
-  const overallColor = report.overallScore >= 80 ? "#10b981" : report.overallScore >= 60 ? "#f59e0b" : "#ef4444";
-  const pacingColor = report.pacing.assessment === "good" ? "#10b981" : "#f59e0b";
-  const fillerColor = report.fillerWords.count === 0 ? "#10b981" : report.fillerWords.count <= 4 ? "#f59e0b" : "#ef4444";
+  const overallColor = report.overallScore >= 80 ? "#7A9F73" : report.overallScore >= 60 ? "#C9A84C" : "#C0614A";
+  const pacingColor = report.pacing.assessment === "good" ? "#7A9F73" : "#C9A84C";
+  const fillerColor = report.fillerWords.count === 0 ? "#7A9F73" : report.fillerWords.count <= 4 ? "#C9A84C" : "#C0614A";
   return (
-    <div className="glass rounded-2xl overflow-hidden animate-fade-in">
-      <div className="px-5 py-4 border-b border-white/[0.06] flex items-center gap-3" style={{ background: "rgba(251,191,36,0.04)" }}>
-        <span className="text-amber-400 text-lg">✦</span>
-        <span className="font-bold text-white">AI Coaching Report</span>
+    <div className="glass rounded-3xl overflow-hidden animate-fade-in">
+      <div className="px-5 py-4 flex items-center gap-3" style={{ borderBottom: "1px solid rgba(201,168,76,0.14)", background: "rgba(201,168,76,0.04)" }}>
+        <span style={{ color: "#C9A84C" }} className="text-lg">✦</span>
+        <span className="font-bold text-[#3D2B1F]">AI Coaching Report</span>
         <div className="ml-auto flex items-center gap-3">
           <span className="text-xs px-2.5 py-1 rounded-full font-bold"
             style={{ background: `${overallColor}18`, color: overallColor, border: `1px solid ${overallColor}35` }}>
             {report.overallScore}/100
           </span>
-          <button onClick={onRedo} className="text-xs text-white/35 hover:text-white/65 transition-colors">↺ Retry</button>
+          <button onClick={onRedo} className="text-xs text-[#9A8A7E] hover:text-[#3D2B1F]/65 transition-colors">↺ Retry</button>
         </div>
       </div>
-      <div className="px-5 py-5 flex gap-4 items-start border-b border-white/[0.06]">
+      <div className="px-5 py-5 flex gap-4 items-start" style={{ borderBottom: "1px solid rgba(201,168,76,0.14)" }}>
         <div className="flex-shrink-0 w-[72px] h-[72px] rounded-full flex flex-col items-center justify-center"
           style={{ background: `${overallColor}12`, border: `2px solid ${overallColor}35` }}>
-          <span className="text-2xl font-bold leading-none" style={{ color: overallColor }}>{report.overallScore}</span>
-          <span className="text-[10px] text-white/40 mt-0.5">score</span>
+          <span className="text-2xl font-bold leading-none" style={{ color: overallColor, fontFamily: "Inter, system-ui, sans-serif" }}>{report.overallScore}</span>
+          <span className="text-[10px] text-[#9A8A7E] mt-0.5">score</span>
         </div>
-        <p className="text-sm text-white/70 leading-relaxed flex-1">{report.summary}</p>
+        <p className="text-sm text-[#3D2B1F]/75 leading-relaxed flex-1" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>{report.summary}</p>
       </div>
-      <div className="px-5 py-5 space-y-3 border-b border-white/[0.06]">
-        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Score Breakdown</p>
+      <div className="px-5 py-5 space-y-3" style={{ borderBottom: "1px solid rgba(201,168,76,0.14)" }}>
+        <p className="text-[10px] font-bold text-[#9A8A7E] uppercase tracking-widest mb-3">Score Breakdown</p>
         <ScoreBar label="Clarity" score={report.scores.clarity} />
         <ScoreBar label="Confidence" score={report.scores.confidence} />
         <ScoreBar label="Structure" score={report.scores.structure} />
         <ScoreBar label="Delivery" score={report.scores.delivery} />
       </div>
-      <div className="grid grid-cols-2 divide-x divide-white/[0.06] border-b border-white/[0.06]">
-        <div className="px-5 py-5">
-          <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Filler Words</p>
-          <p className="text-3xl font-bold mb-2" style={{ color: fillerColor }}>{report.fillerWords.count}</p>
+      <div className="grid grid-cols-2" style={{ borderBottom: "1px solid rgba(201,168,76,0.14)" }}>
+        <div className="px-5 py-5" style={{ borderRight: "1px solid rgba(201,168,76,0.14)" }}>
+          <p className="text-[10px] font-bold text-[#9A8A7E] uppercase tracking-widest mb-3">Filler Words</p>
+          <p className="text-3xl font-bold mb-2" style={{ color: fillerColor, fontFamily: "Inter, system-ui, sans-serif" }}>{report.fillerWords.count}</p>
           {report.fillerWords.words.length > 0 ? (
             <div className="flex flex-wrap gap-1 mb-2">
               {report.fillerWords.words.slice(0, 4).map((w) => (
                 <span key={w.word} className="text-[10px] px-1.5 py-0.5 rounded font-mono"
-                  style={{ background: "rgba(239,68,68,0.12)", color: "#fca5a5" }}>{w.word} ×{w.count}</span>
+                  style={{ background: "rgba(192,97,74,0.1)", color: "#C0614A" }}>{w.word} ×{w.count}</span>
               ))}
             </div>
-          ) : <p className="text-xs text-green-400 mb-2">None detected 🎉</p>}
-          <p className="text-[11px] text-white/40 leading-relaxed">{report.fillerWords.impact}</p>
+          ) : <p className="text-xs mb-2" style={{ color: "#7A9F73" }}>None detected 🎉</p>}
+          <p className="text-[11px] text-[#9A8A7E] leading-relaxed">{report.fillerWords.impact}</p>
         </div>
         <div className="px-5 py-5">
-          <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-3">Pacing</p>
-          <p className="text-3xl font-bold text-white mb-2">{report.pacing.wordsPerMinute}<span className="text-sm text-white/40 ml-1">WPM</span></p>
+          <p className="text-[10px] font-bold text-[#9A8A7E] uppercase tracking-widest mb-3">Pacing</p>
+          <p className="text-3xl font-bold text-[#3D2B1F] mb-2" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>{report.pacing.wordsPerMinute}<span className="text-sm text-[#9A8A7E] ml-1">WPM</span></p>
           <span className="text-xs font-semibold capitalize px-2 py-0.5 rounded-full"
             style={{ background: `${pacingColor}15`, color: pacingColor }}>{report.pacing.assessment}</span>
-          <p className="text-[11px] text-white/40 leading-relaxed mt-2">{report.pacing.suggestion}</p>
+          <p className="text-[11px] text-[#9A8A7E] leading-relaxed mt-2">{report.pacing.suggestion}</p>
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-white/[0.06] border-b border-white/[0.06]">
-        <div className="px-5 py-5">
-          <p className="text-[10px] font-bold text-green-400 uppercase tracking-widest mb-3">✅ Strengths</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2" style={{ borderBottom: "1px solid rgba(201,168,76,0.14)" }}>
+        <div className="px-5 py-5" style={{ borderBottom: "1px solid rgba(201,168,76,0.14)" }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "#7A9F73" }}>✅ Strengths</p>
           <ul className="space-y-2">
             {report.strengths.map((s, i) => (
-              <li key={i} className="flex gap-2 text-xs text-white/65 leading-relaxed">
-                <span className="text-green-400 flex-shrink-0 mt-0.5">•</span><span>{s}</span>
+              <li key={i} className="flex gap-2 text-xs text-[#3D2B1F]/65 leading-relaxed">
+                <span className="flex-shrink-0 mt-0.5" style={{ color: "#7A9F73" }}>•</span><span>{s}</span>
               </li>
             ))}
           </ul>
         </div>
         <div className="px-5 py-5">
-          <p className="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-3">⚡ Improve</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-3" style={{ color: "#C9A84C" }}>⚡ Improve</p>
           <ul className="space-y-2">
             {report.improvements.map((imp, i) => (
-              <li key={i} className="flex gap-2 text-xs text-white/65 leading-relaxed">
-                <span className="text-amber-400 flex-shrink-0 mt-0.5">•</span><span>{imp}</span>
+              <li key={i} className="flex gap-2 text-xs text-[#3D2B1F]/65 leading-relaxed">
+                <span className="flex-shrink-0 mt-0.5" style={{ color: "#C9A84C" }}>•</span><span>{imp}</span>
               </li>
             ))}
           </ul>
         </div>
       </div>
-      <div className="px-5 py-5" style={{ background: "rgba(251,191,36,0.03)" }}>
-        <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-2">🎯 Focus Next Session On</p>
-        <p className="text-sm font-semibold text-amber-300 leading-relaxed">{report.oneThingToFocus}</p>
+      <div className="px-5 py-5" style={{ background: "rgba(201,168,76,0.04)" }}>
+        <p className="text-[10px] font-bold text-[#9A8A7E] uppercase tracking-widest mb-2">🎯 Focus Next Session On</p>
+        <p className="text-sm font-semibold leading-relaxed" style={{ color: "#C9A84C", fontFamily: "Inter, system-ui, sans-serif" }}>{report.oneThingToFocus}</p>
       </div>
     </div>
   );
@@ -1035,13 +1041,13 @@ function PracticeScreen({
   const canAnalyze = sessionStopped && wordCount >= 5 && !isAnalyzing;
 
   return (
-    <div className="min-h-screen" style={{ background: "#0a0a0f" }}>
+    <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #FAF7F2 0%, #F5EDE8 100%)" }}>
       <nav className="nav-blur sticky top-0 z-50 flex items-center gap-4 px-6 py-4">
-        <button onClick={onBack} className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors text-white/60 hover:text-white text-sm">
+        <button onClick={onBack} className="p-2 rounded-xl transition-colors text-[#9A8A7E] hover:text-[#3D2B1F] text-sm">
           ← Scenarios
         </button>
         <span className="text-xl">{scenario.icon}</span>
-        <span className="text-base font-bold text-white">{scenario.title}</span>
+        <span className="text-base font-bold text-[#3D2B1F]">{scenario.title}</span>
         <div className="ml-auto"><DifficultyBadge label={scenario.difficulty} colorClass={scenario.difficultyColor} /></div>
       </nav>
 
@@ -1051,91 +1057,92 @@ function PracticeScreen({
           {/* ── Left: Timer + transcript ── */}
           <div className="lg:col-span-2 space-y-5">
             {scenario.id === "improv" && (
-              <div className="rounded-2xl p-5 animate-fade-in"
-                style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
+              <div className="rounded-3xl p-5 animate-fade-in"
+                style={{ background: "rgba(200,213,192,0.3)", border: "1px solid rgba(122,159,115,0.3)" }}>
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold text-green-400 uppercase tracking-widest">Your Topic</span>
-                  <button onClick={onNewTopic} className="text-xs text-green-400 hover:text-green-300 font-semibold transition-colors">🎲 New Topic</button>
+                  <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "#5A7A54" }}>Your Topic</span>
+                  <button onClick={onNewTopic} className="text-xs font-semibold transition-colors" style={{ color: "#5A7A54" }}>🎲 New Topic</button>
                 </div>
-                <p className="text-white font-semibold leading-relaxed">{improvTopic}</p>
-                <p className="text-white/40 text-xs mt-2">{scenario.tips.improv}</p>
+                <p className="text-[#3D2B1F] font-semibold leading-relaxed">{improvTopic}</p>
+                <p className="text-[#9A8A7E] text-xs mt-2">{scenario.tips.improv}</p>
               </div>
             )}
 
-            <div className="glass rounded-2xl p-5">
-              <p className="text-xs font-bold text-white/40 uppercase tracking-widest mb-4">Duration</p>
+            <div className="glass rounded-3xl p-5">
+              <p className="text-xs font-bold text-[#9A8A7E] uppercase tracking-widest mb-4">Duration</p>
               <div className="grid grid-cols-4 gap-2">
                 {TIMER_OPTIONS.map((opt) => (
                   <button key={opt.seconds} onClick={() => onSelectDuration(opt.seconds)} disabled={timerActive}
-                    className={`py-2.5 rounded-xl text-sm font-bold transition-all ${timerDuration === opt.seconds ? "text-black" : "text-white/50 hover:text-white/80 hover:bg-white/[0.06]"} ${timerActive ? "opacity-40 cursor-not-allowed" : ""}`}
-                    style={timerDuration === opt.seconds ? { background: "linear-gradient(135deg, #f59e0b, #d97706)" } : {}}>
+                    className={`py-2.5 rounded-full text-sm font-bold transition-all ${timerDuration === opt.seconds ? "text-white" : "text-[#9A8A7E] hover:text-[#3D2B1F]"} ${timerActive ? "opacity-40 cursor-not-allowed" : ""}`}
+                    style={timerDuration === opt.seconds ? { background: "linear-gradient(135deg, #C9A84C, #B8913C)" } : {}}>
                     {opt.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="glass rounded-2xl p-8 flex flex-col items-center gap-6">
+            <div className="glass rounded-3xl p-8 flex flex-col items-center gap-6">
               <CircularTimer seconds={timeLeft} total={timerDuration} active={timerActive} />
               {timerDone && (
                 <div className="text-center animate-fade-in">
-                  <p className="text-amber-400 font-bold text-lg">Time&apos;s up! 🎉</p>
-                  <p className="text-white/40 text-sm mt-1">{wordCount > 0 ? `${wordCount} words captured` : "Get AI coaching →"}</p>
+                  <p className="font-bold text-lg" style={{ color: "#C9A84C" }}>Time&apos;s up! 🎉</p>
+                  <p className="text-[#9A8A7E] text-sm mt-1">{wordCount > 0 ? `${wordCount} words captured` : "Get AI coaching →"}</p>
                 </div>
               )}
               <div className="flex items-center gap-3">
                 {isNeverStarted && (
-                  <button onClick={onStart} className="btn-primary px-8 py-3 rounded-xl font-bold flex items-center gap-2"><span>▶</span> Start</button>
+                  <button onClick={onStart} className="btn-primary px-8 py-3 rounded-full font-bold flex items-center gap-2"><span>▶</span> Start</button>
                 )}
                 {timerActive && (
-                  <button onClick={onPause} className="px-8 py-3 rounded-xl font-bold glass hover:bg-white/[0.08] transition-all" style={{ color: "rgba(255,255,255,0.8)" }}>⏸ Pause</button>
+                  <button onClick={onPause} className="px-8 py-3 rounded-full font-bold glass transition-all" style={{ color: "#3D2B1F" }}>⏸ Pause</button>
                 )}
                 {isPaused && (
                   <>
-                    <button onClick={onResume} className="btn-primary px-8 py-3 rounded-xl font-bold flex items-center gap-2"><span>▶</span> Resume</button>
-                    <button onClick={onReset} className="px-5 py-3 rounded-xl text-sm glass text-white/50 hover:text-white transition-all">↺</button>
+                    <button onClick={onResume} className="btn-primary px-8 py-3 rounded-full font-bold flex items-center gap-2"><span>▶</span> Resume</button>
+                    <button onClick={onReset} className="px-5 py-3 rounded-full text-sm glass text-[#9A8A7E] hover:text-[#3D2B1F] transition-all">↺</button>
                   </>
                 )}
                 {timerDone && (
-                  <button onClick={onReset} className="px-5 py-3 rounded-xl text-sm glass text-white/50 hover:text-white transition-all">↺ Reset</button>
+                  <button onClick={onReset} className="px-5 py-3 rounded-full text-sm glass text-[#9A8A7E] hover:text-[#3D2B1F] transition-all">↺ Reset</button>
                 )}
               </div>
             </div>
 
             {/* Live transcript */}
-            <div className="glass rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
+            <div className="glass rounded-3xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid rgba(201,168,76,0.12)" }}>
                 <div className="flex items-center gap-2">
-                  {timerActive && speechSupported && <div className="w-2 h-2 rounded-full bg-red-500 animate-timer-pulse" />}
-                  <span className="text-xs font-semibold text-white/60">{timerActive && speechSupported ? "Recording…" : "Your Speech"}</span>
+                  {timerActive && speechSupported && <div className="w-2 h-2 rounded-full animate-timer-pulse" style={{ background: "#C0614A" }} />}
+                  <span className="text-xs font-semibold text-[#9A8A7E]">{timerActive && speechSupported ? "Recording…" : "Your Speech"}</span>
                 </div>
-                {wordCount > 0 && <span className="text-xs text-white/30">{wordCount} words</span>}
+                {wordCount > 0 && <span className="text-xs text-[#9A8A7E]/60">{wordCount} words</span>}
               </div>
               {speechSupported ? (
                 <div className="h-28 overflow-y-auto px-4 py-3 scrollbar-hide">
                   {transcript || interimText ? (
-                    <p className="text-sm text-white/70 leading-relaxed">
+                    <p className="text-sm text-[#3D2B1F]/75 leading-relaxed" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
                       {transcript}
-                      {interimText && <span className="text-white/30 italic">{interimText}</span>}
+                      {interimText && <span className="text-[#9A8A7E] italic">{interimText}</span>}
                     </p>
                   ) : (
-                    <p className="text-sm text-white/25 italic">
+                    <p className="text-sm text-[#9A8A7E]/50 italic" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
                       {timerActive ? "Start speaking — your words appear here…" : "Start the timer and speak. Your transcript appears here."}
                     </p>
                   )}
                 </div>
               ) : (
                 <div className="px-4 py-3">
-                  <p className="text-xs text-white/30 mb-2">Auto-transcription requires Chrome. Type your speech to analyze:</p>
+                  <p className="text-xs text-[#9A8A7E] mb-2">Auto-transcription requires Chrome. Type your speech to analyze:</p>
                   <textarea value={transcript} onChange={(e) => onTranscriptChange(e.target.value)}
                     placeholder="Paste or type what you said…" rows={4}
-                    className="w-full bg-transparent text-sm text-white/70 placeholder:text-white/20 outline-none resize-none" />
+                    className="w-full bg-transparent text-sm text-[#3D2B1F]/75 placeholder:text-[#9A8A7E]/50 outline-none resize-none"
+                    style={{ fontFamily: "Inter, system-ui, sans-serif" }} />
                 </div>
               )}
             </div>
 
             <button onClick={onTeleprompter}
-              className="w-full glass rounded-xl py-3 px-5 text-sm font-semibold text-white/50 hover:text-white/80 transition-all hover:bg-white/[0.06] flex items-center justify-center gap-2">
+              className="w-full glass rounded-2xl py-3 px-5 text-sm font-semibold text-[#9A8A7E] hover:text-[#3D2B1F] transition-all flex items-center justify-center gap-2">
               <span>📋</span> Open Teleprompter
             </button>
           </div>
@@ -1143,28 +1150,28 @@ function PracticeScreen({
           {/* ── Right: AI results / coaching tips ── */}
           <div className="lg:col-span-3 space-y-5">
             <div className="animate-fade-in">
-              <h2 className="text-xl font-bold text-white mb-1">{coachingReport ? "AI Coaching Report" : `Coaching for ${scenario.title}`}</h2>
-              <p className="text-white/50 text-sm">{scenario.subtitle}</p>
+              <h2 className="text-xl font-bold text-[#3D2B1F] mb-1">{coachingReport ? "AI Coaching Report" : `Coaching for ${scenario.title}`}</h2>
+              <p className="text-[#9A8A7E] text-sm" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>{scenario.subtitle}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {scenario.trains.split(" · ").map((skill) => (
                 <span key={skill} className="px-3 py-1 rounded-full text-xs font-semibold"
-                  style={{ background: "rgba(251,191,36,0.1)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.2)" }}>{skill}</span>
+                  style={{ background: "rgba(201,168,76,0.1)", color: "#C9A84C", border: "1px solid rgba(201,168,76,0.22)" }}>{skill}</span>
               ))}
             </div>
 
             {coachingReport && <CoachingResults report={coachingReport} onRedo={onClearReport} />}
 
             {sessionStopped && !coachingReport && !isAnalyzing && (
-              <div className="rounded-2xl p-5 animate-fade-in"
-                style={{ background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.18)" }}>
+              <div className="rounded-3xl p-5 animate-fade-in"
+                style={{ background: "rgba(201,168,76,0.05)", border: "1px solid rgba(201,168,76,0.2)" }}>
                 <div className="flex items-start gap-3 mb-4">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(251,191,36,0.12)" }}>
-                    <span className="text-amber-400 text-base">✦</span>
+                  <div className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(201,168,76,0.12)" }}>
+                    <span style={{ color: "#C9A84C" }} className="text-base">✦</span>
                   </div>
                   <div>
-                    <p className="text-white font-semibold text-sm mb-1">Get AI Coaching</p>
-                    <p className="text-white/50 text-xs leading-relaxed">
+                    <p className="text-[#3D2B1F] font-semibold text-sm mb-1">Get AI Coaching</p>
+                    <p className="text-[#9A8A7E] text-xs leading-relaxed" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
                       {wordCount >= 5
                         ? `Claude will analyze your ${wordCount}-word speech — filler words, pacing, structure, delivery — and give you a personalized score and action plan.`
                         : "Speak for at least a few sentences to get a full analysis."}
@@ -1172,26 +1179,26 @@ function PracticeScreen({
                   </div>
                 </div>
                 {coachingError && (
-                  <div className="mb-3 px-4 py-3 rounded-xl text-sm text-red-300"
-                    style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                  <div className="mb-3 px-4 py-3 rounded-2xl text-sm"
+                    style={{ background: "rgba(192,97,74,0.08)", border: "1px solid rgba(192,97,74,0.2)", color: "#C0614A" }}>
                     {coachingError}
                   </div>
                 )}
                 <button onClick={onAnalyze} disabled={!canAnalyze}
-                  className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${canAnalyze ? "btn-primary" : "opacity-40 cursor-not-allowed text-white/50 glass"}`}>
+                  className={`w-full py-3 rounded-full font-bold text-sm transition-all ${canAnalyze ? "btn-primary" : "opacity-40 cursor-not-allowed text-[#9A8A7E] glass"}`}>
                   ✦ Analyze My Speech
                 </button>
               </div>
             )}
 
             {isAnalyzing && (
-              <div className="rounded-2xl p-8 animate-fade-in flex flex-col items-center gap-4"
-                style={{ background: "rgba(251,191,36,0.04)", border: "1px solid rgba(251,191,36,0.12)" }}>
+              <div className="rounded-3xl p-8 animate-fade-in flex flex-col items-center gap-4"
+                style={{ background: "rgba(201,168,76,0.04)", border: "1px solid rgba(201,168,76,0.14)" }}>
                 <div className="w-12 h-12 rounded-full border-2 animate-spin"
-                  style={{ borderColor: "rgba(251,191,36,0.2)", borderTopColor: "#f59e0b" }} />
+                  style={{ borderColor: "rgba(201,168,76,0.2)", borderTopColor: "#C9A84C" }} />
                 <div className="text-center">
-                  <p className="text-white font-semibold mb-1">Claude is reviewing your speech…</p>
-                  <p className="text-white/40 text-sm">Counting filler words, checking pacing, building your report.</p>
+                  <p className="text-[#3D2B1F] font-semibold mb-1">Claude is reviewing your speech…</p>
+                  <p className="text-[#9A8A7E] text-sm" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>Counting filler words, checking pacing, building your report.</p>
                 </div>
               </div>
             )}
@@ -1242,12 +1249,12 @@ Tip: Write in short sentences — they're easier to read at a glance while you'r
   if (fullscreen && text) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col"
-        style={{ background: "#000" }}>
+        style={{ background: "#1A1410" }}>
         {/* Controls bar */}
         <div className="flex-shrink-0 flex items-center justify-between px-8 py-4"
-          style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(12px)" }}>
+          style={{ background: "rgba(26,20,16,0.9)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(201,168,76,0.15)" }}>
           <div className="flex items-center gap-4">
-            <span className="text-white/40 text-sm font-medium">Speed</span>
+            <span className="text-[#9A8A7E] text-sm font-medium">Speed</span>
             <input
               type="range"
               min={10}
@@ -1259,23 +1266,24 @@ Tip: Write in short sentences — they're easier to read at a glance while you'r
           </div>
           <div className="flex items-center gap-3">
             <button onClick={onReset}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white/50 hover:text-white transition-colors">
+              className="px-4 py-2 rounded-full text-sm font-semibold text-[#9A8A7E] hover:text-[#FAF7F2] transition-colors">
               ↺ Reset
             </button>
             {scrolling ? (
               <button onClick={onStop}
-                className="px-5 py-2 rounded-lg text-sm font-bold glass text-white">
+                className="px-5 py-2 rounded-full text-sm font-bold text-[#FAF7F2]"
+                style={{ background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.15)" }}>
                 ⏸ Pause
               </button>
             ) : (
               <button onClick={onStart}
-                className="btn-primary px-5 py-2 rounded-lg text-sm font-bold">
+                className="btn-primary px-5 py-2 rounded-full text-sm font-bold">
                 ▶ Play
               </button>
             )}
             <button
               onClick={() => { onStop(); setFullscreen(false); }}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white/50 hover:text-white transition-colors">
+              className="px-4 py-2 rounded-full text-sm font-semibold text-[#9A8A7E] hover:text-[#FAF7F2] transition-colors">
               ✕ Exit
             </button>
           </div>
@@ -1289,12 +1297,12 @@ Tip: Write in short sentences — they're easier to read at a glance while you'r
         >
           {/* Gradient masks */}
           <div className="pointer-events-none fixed top-16 left-0 right-0 h-32 z-10"
-            style={{ background: "linear-gradient(to bottom, #000, transparent)" }} />
+            style={{ background: "linear-gradient(to bottom, #1A1410, transparent)" }} />
           <div className="pointer-events-none fixed bottom-0 left-0 right-0 h-32 z-10"
-            style={{ background: "linear-gradient(to top, #000, transparent)" }} />
+            style={{ background: "linear-gradient(to top, #1A1410, transparent)" }} />
 
-          <p className="teleprompter-text text-white text-center"
-            style={{ fontSize: "clamp(1.5rem, 3vw, 2.5rem)", lineHeight: 1.7, paddingBottom: "80vh" }}>
+          <p className="teleprompter-text text-center"
+            style={{ color: "#FAF7F2", fontSize: "clamp(1.5rem, 3vw, 2.5rem)", lineHeight: 1.7, paddingBottom: "80vh", fontFamily: "Inter, system-ui, sans-serif" }}>
             {text}
           </p>
         </div>
@@ -1303,31 +1311,31 @@ Tip: Write in short sentences — they're easier to read at a glance while you'r
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#0a0a0f" }}>
+    <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #FAF7F2 0%, #F5EDE8 100%)" }}>
       <nav className="nav-blur sticky top-0 z-50 flex items-center gap-4 px-6 py-4">
-        <button onClick={onBack} className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors text-white/60 hover:text-white text-sm">
+        <button onClick={onBack} className="p-2 rounded-xl transition-colors text-[#9A8A7E] hover:text-[#3D2B1F] text-sm">
           ← Back
         </button>
         <div className="flex items-center gap-2">
           <span>📋</span>
-          <span className="font-bold text-white">Teleprompter</span>
+          <span className="font-bold text-[#3D2B1F]">Teleprompter</span>
         </div>
       </nav>
 
       <div className="max-w-4xl mx-auto px-6 py-10">
         <div className="mb-8 animate-fade-in">
-          <h2 className="text-3xl font-bold text-white mb-2">Teleprompter Mode</h2>
-          <p className="text-white/50">Paste your script and read it hands-free while you present.</p>
+          <h2 className="text-3xl font-bold text-[#3D2B1F] mb-2">Teleprompter Mode</h2>
+          <p className="text-[#9A8A7E]" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>Paste your script and read it hands-free while you present.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Script input */}
           <div className="lg:col-span-2">
-            <div className="glass rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06]">
-                <span className="text-sm font-semibold text-white/60">Your Script</span>
+            <div className="glass rounded-3xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: "1px solid rgba(201,168,76,0.12)" }}>
+                <span className="text-sm font-semibold text-[#9A8A7E]">Your Script</span>
                 {text && (
-                  <button onClick={() => setText("")} className="text-xs text-white/30 hover:text-white/60 transition-colors">
+                  <button onClick={() => setText("")} className="text-xs text-[#9A8A7E]/60 hover:text-[#9A8A7E] transition-colors">
                     Clear
                   </button>
                 )}
@@ -1337,7 +1345,8 @@ Tip: Write in short sentences — they're easier to read at a glance while you'r
                 onChange={(e) => setText(e.target.value)}
                 placeholder={PLACEHOLDER}
                 rows={16}
-                className="w-full bg-transparent px-5 py-4 text-white/80 text-sm leading-relaxed placeholder:text-white/20 outline-none"
+                className="w-full bg-transparent px-5 py-4 text-sm leading-relaxed outline-none"
+                style={{ color: "#3D2B1F", fontFamily: "Inter, system-ui, sans-serif" }}
               />
             </div>
           </div>
@@ -1345,10 +1354,10 @@ Tip: Write in short sentences — they're easier to read at a glance while you'r
           {/* Controls */}
           <div className="space-y-5">
             {/* Speed */}
-            <div className="glass rounded-2xl p-5">
+            <div className="glass rounded-3xl p-5">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-sm font-semibold text-white/60">Scroll Speed</span>
-                <span className="text-sm font-bold text-amber-400">{speed}%</span>
+                <span className="text-sm font-semibold text-[#9A8A7E]">Scroll Speed</span>
+                <span className="text-sm font-bold" style={{ color: "#C9A84C" }}>{speed}%</span>
               </div>
               <input
                 type="range"
@@ -1358,53 +1367,58 @@ Tip: Write in short sentences — they're easier to read at a glance while you'r
                 onChange={(e) => setSpeed(Number(e.target.value))}
                 className="w-full"
               />
-              <div className="flex justify-between text-xs text-white/30 mt-2">
+              <div className="flex justify-between text-xs text-[#9A8A7E]/60 mt-2">
                 <span>Slow</span>
                 <span>Fast</span>
               </div>
             </div>
 
             {/* Preview / Play */}
-            <div className="glass rounded-2xl overflow-hidden">
+            <div className="glass rounded-3xl overflow-hidden">
               <div
                 ref={containerRef}
                 className="h-40 overflow-hidden px-4 py-4 relative"
               >
                 <div className="pointer-events-none absolute top-0 left-0 right-0 h-8 z-10"
-                  style={{ background: "linear-gradient(to bottom, rgba(15,15,26,0.9), transparent)" }} />
+                  style={{ background: "linear-gradient(to bottom, rgba(255,255,255,0.95), transparent)" }} />
                 <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 z-10"
-                  style={{ background: "linear-gradient(to top, rgba(15,15,26,0.9), transparent)" }} />
-                <p className="text-white/60 text-sm leading-relaxed whitespace-pre-wrap">
+                  style={{ background: "linear-gradient(to top, rgba(255,255,255,0.95), transparent)" }} />
+                <p className="text-sm leading-relaxed whitespace-pre-wrap text-[#3D2B1F]/65"
+                  style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
                   {text || PLACEHOLDER}
                 </p>
               </div>
-              <div className="border-t border-white/[0.06] p-4 space-y-2">
+              <div className="p-4 space-y-2" style={{ borderTop: "1px solid rgba(201,168,76,0.12)" }}>
                 <div className="flex gap-2">
                   {scrolling ? (
                     <button onClick={onStop}
-                      className="flex-1 glass py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:bg-white/[0.08]">
+                      className="flex-1 glass py-2.5 rounded-full text-sm font-bold text-[#3D2B1F] transition-all">
                       ⏸ Pause
                     </button>
                   ) : (
                     <button onClick={onStart} disabled={!text}
-                      className={`flex-1 btn-primary py-2.5 rounded-xl text-sm font-bold ${!text ? "opacity-30 cursor-not-allowed" : ""}`}>
+                      className={`flex-1 btn-primary py-2.5 rounded-full text-sm font-bold ${!text ? "opacity-30 cursor-not-allowed" : ""}`}>
                       ▶ Play
                     </button>
                   )}
                   <button onClick={onReset}
-                    className="px-4 py-2.5 rounded-xl text-sm font-semibold glass text-white/50 hover:text-white transition-colors">
+                    className="px-4 py-2.5 rounded-full text-sm font-semibold glass text-[#9A8A7E] hover:text-[#3D2B1F] transition-colors">
                     ↺
                   </button>
                 </div>
                 <button
                   onClick={() => { onStop(); onReset(); setFullscreen(true); }}
                   disabled={!text}
-                  className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all ${
+                  className={`w-full py-2.5 rounded-full text-sm font-bold transition-all ${
                     text
-                      ? "text-amber-400 hover:bg-amber-400/[0.08]"
-                      : "text-white/20 cursor-not-allowed"
+                      ? ""
+                      : "cursor-not-allowed"
                   }`}
-                  style={{ border: `1px solid ${text ? "rgba(251,191,36,0.25)" : "rgba(255,255,255,0.06)"}` }}
+                  style={{
+                    color: text ? "#C9A84C" : "#9A8A7E",
+                    border: `1px solid ${text ? "rgba(201,168,76,0.28)" : "rgba(201,168,76,0.1)"}`,
+                    background: text ? "rgba(201,168,76,0.05)" : "transparent",
+                  }}
                 >
                   ⛶ Fullscreen Mode
                 </button>
@@ -1412,16 +1426,16 @@ Tip: Write in short sentences — they're easier to read at a glance while you'r
             </div>
 
             {/* Tips */}
-            <div className="glass rounded-2xl p-5 space-y-3">
-              <p className="text-xs font-bold text-white/40 uppercase tracking-widest">Pro Tips</p>
+            <div className="glass rounded-3xl p-5 space-y-3">
+              <p className="text-xs font-bold text-[#9A8A7E] uppercase tracking-widest">Pro Tips</p>
               {[
                 "Use short sentences for easier reading",
                 "Mark pauses with // or —",
                 "Bold key words in your mind, not on screen",
                 "Practice without scrolling first",
               ].map((tip, i) => (
-                <div key={i} className="flex gap-2 text-xs text-white/50 leading-relaxed">
-                  <span className="text-amber-400/60 mt-0.5">•</span>
+                <div key={i} className="flex gap-2 text-xs text-[#9A8A7E] leading-relaxed">
+                  <span className="mt-0.5" style={{ color: "rgba(201,168,76,0.7)" }}>•</span>
                   <span>{tip}</span>
                 </div>
               ))}
