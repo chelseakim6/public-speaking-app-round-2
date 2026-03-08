@@ -1,24 +1,21 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { readFileSync } from "fs";
 
-function createClient() {
-  // Prefer explicit API key from environment
+export const maxDuration = 120;
+
+function getAuthHeader(): { header: string; value: string } {
   if (process.env.ANTHROPIC_API_KEY) {
-    return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    return { header: "x-api-key", value: process.env.ANTHROPIC_API_KEY };
   }
-  // Fall back to session bearer token (Claude Code dev environment)
   const tokenPath = "/home/claude/.claude/remote/.session_ingress_token";
   try {
     const token = readFileSync(tokenPath, "utf8").trim();
-    if (token) return new Anthropic({ authToken: token });
+    if (token) return { header: "Authorization", value: `Bearer ${token}` };
   } catch {
     // token file not available
   }
-  return new Anthropic(); // will throw AuthenticationError if no key configured
+  throw new Error("No Anthropic API key configured. Set ANTHROPIC_API_KEY in your environment.");
 }
-
-const client = createClient();
 
 export async function POST(req: NextRequest) {
   try {
@@ -81,47 +78,63 @@ Return this exact JSON structure:
   "oneThingToFocus": "<the single most impactful thing to work on in the next session>"
 }`;
 
-    const response = await client.messages.create({
-      model: "claude-opus-4-6",
-      max_tokens: 2048,
-      thinking: { type: "adaptive" },
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-    });
+    const auth = getAuthHeader();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
 
-    const textBlock = response.content.find((b) => b.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
-      throw new Error("No text response from Claude");
+    let apiResponse: Response;
+    try {
+      apiResponse = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "anthropic-version": "2023-06-01",
+          [auth.header]: auth.value,
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 2048,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userPrompt }],
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
     }
 
-    // Extract JSON — strip any accidental markdown fencing
+    if (!apiResponse.ok) {
+      const errBody = await apiResponse.json().catch(() => ({})) as { error?: { message?: string } };
+      if (apiResponse.status === 401) {
+        return NextResponse.json(
+          { error: "API key not configured. Set ANTHROPIC_API_KEY in your environment." },
+          { status: 401 }
+        );
+      }
+      if (apiResponse.status === 429) {
+        return NextResponse.json(
+          { error: "Rate limit reached. Please try again in a moment." },
+          { status: 429 }
+        );
+      }
+      throw new Error(errBody?.error?.message ?? `API error ${apiResponse.status}`);
+    }
+
+    const data = await apiResponse.json() as { content: Array<{ type: string; text?: string }> };
+    const textBlock = data.content.find((b) => b.type === "text");
+    if (!textBlock?.text) throw new Error("No text response from Claude");
+
     const jsonMatch = textBlock.text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("Could not extract JSON from response");
-    }
+    if (!jsonMatch) throw new Error("Could not extract JSON from response");
 
     const report = JSON.parse(jsonMatch[0]);
     return NextResponse.json(report);
   } catch (error) {
     console.error("Coaching API error:", error);
-
-    if (error instanceof Anthropic.AuthenticationError) {
-      return NextResponse.json(
-        { error: "API key not configured. Set ANTHROPIC_API_KEY in your environment." },
-        { status: 401 }
-      );
+    const msg = error instanceof Error ? error.message : "Analysis failed. Please try again.";
+    if (msg.includes("API key not configured")) {
+      return NextResponse.json({ error: msg }, { status: 401 });
     }
-
-    if (error instanceof Anthropic.RateLimitError) {
-      return NextResponse.json(
-        { error: "Rate limit reached. Please try again in a moment." },
-        { status: 429 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: "Analysis failed. Please try again." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Analysis failed. Please try again." }, { status: 500 });
   }
 }
